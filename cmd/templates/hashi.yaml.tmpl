@@ -1,0 +1,14 @@
+# Directory name for worktree placement
+worktree_dir: .worktrees
+
+hooks:
+  # Files/directories to copy from repo root to new worktrees.
+  # Non-existent entries are silently skipped.
+  copy_files:
+  #   - .env
+  #   - .claude
+
+  # Shell commands to run after worktree creation (executed sequentially).
+  # Working directory is set to the new worktree path.
+  post_new:
+  #   - npm install

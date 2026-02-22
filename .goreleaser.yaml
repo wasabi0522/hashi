@@ -1,0 +1,29 @@
+version: 2
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X github.com/wasabi0522/hashi/cmd.version={{.Version}}
+
+brews:
+  - repository:
+      owner: wasabi0522
+      name: homebrew-tap
+    homepage: https://github.com/wasabi0522/hashi
+    description: Git worktree + tmux session manager
+    install: |
+      bin.install "hashi"
+    test: |
+      system "#{bin}/hashi", "--version"
+
+archives:
+  - formats: ['tar.gz']
+    name_template: >-
+      {{ .ProjectName }}_{{ .Os }}_{{ .Arch }}

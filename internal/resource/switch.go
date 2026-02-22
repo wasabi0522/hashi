@@ -1,0 +1,30 @@
+package resource
+
+import (
+	"context"
+	"fmt"
+)
+
+// SwitchParams holds parameters for the Switch operation.
+type SwitchParams struct {
+	Branch string
+}
+
+// Switch switches to an existing branch, creating worktree and tmux resources as needed.
+func (s *Service) Switch(ctx context.Context, p SwitchParams) (*OperationResult, error) {
+	if err := s.requireBranchExists(p.Branch); err != nil {
+		return nil, err
+	}
+
+	wtPath, wtCreated, err := s.ensureWorktree(p.Branch)
+	if err != nil {
+		return nil, fmt.Errorf("ensuring worktree: %w", err)
+	}
+
+	initCmd := s.buildInitCmd(wtCreated)
+	if err := s.ensureTmux(s.cp.SessionName, p.Branch, wtPath, initCmd); err != nil {
+		return nil, fmt.Errorf("ensuring tmux: %w", err)
+	}
+
+	return s.finalizeOperation(OpSwitch, p.Branch, wtPath, wtCreated)
+}
