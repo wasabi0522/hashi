@@ -73,7 +73,7 @@ func doResolveDeps(opts resolveOpts) (*deps, error) {
 			return nil, fmt.Errorf("required command 'tmux' not found")
 		}
 	}
-	tm := tmux.NewClient(opts.exec)
+	tm := tmux.NewPrefixedClient(tmux.NewClient(opts.exec), tmux.DefaultPrefix)
 	cfg, err := config.Load(filepath.Join(ctx.RepoRoot, ".hashi.yaml"))
 	if err != nil {
 		return nil, err
