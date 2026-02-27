@@ -1,5 +1,8 @@
 version: 2
 
+release:
+  replace_existing_draft: true
+
 builds:
   - env:
       - CGO_ENABLED=0
@@ -16,6 +19,7 @@ homebrew_casks:
   - repository:
       owner: wasabi0522
       name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     homepage: https://github.com/wasabi0522/hashi
     description: Git worktree + tmux session manager
     license: MIT

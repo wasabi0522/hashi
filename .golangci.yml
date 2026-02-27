@@ -10,3 +10,16 @@ linters:
     - errcheck
     - staticcheck
     - unused
+    - errorlint
+    - gosec
+    - ineffassign
+  settings:
+    gosec:
+      excludes:
+        - G204 # subprocess with variable args: intentional for git/tmux CLI wrapper
+        - G301 # directory permissions 0755: standard unix convention
+        - G302 # file permissions 0644: standard for config files
+        - G304 # file path from variable: normal file I/O
+        - G306 # WriteFile permissions 0644: standard for non-secret files
+        - G702 # command injection: intentional shell execution for hooks
+        - G703 # path traversal: internal file copy within worktree

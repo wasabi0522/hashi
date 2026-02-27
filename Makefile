@@ -1,6 +1,6 @@
-.PHONY: all fmt fix fmt-check lint test cover cover-html build generate generate-check clean help
+.PHONY: all fmt fix fmt-check lint test cover cover-html build generate generate-check vulncheck actionlint clean help
 
-all: fmt-check lint cover generate-check build
+all: fmt-check lint cover generate-check vulncheck actionlint build
 
 fmt:
 	go fmt ./...
@@ -24,10 +24,10 @@ test:
 	go test -race ./...
 
 cover:
-	@go test -coverprofile=coverage.raw.out -race ./... 2>&1 | grep -v "^ok\|^?"
+	@set -o pipefail && go test -coverprofile=coverage.raw.out -race ./... 2>&1 | grep -v "^ok\|^?"
 	@grep -v '_mock.go' coverage.raw.out > coverage.out
 	@echo "=== Per-package coverage (mock excluded) ==="
-	@for pkg in cmd internal/config internal/context internal/exec internal/git internal/tmux internal/resource internal/ui; do \
+	@for pkg in $$(go list ./... | grep -v '/tools$$' | sed 's|github.com/wasabi0522/hashi/||' | grep -v '^$$'); do \
 		grep "github.com/wasabi0522/hashi/$$pkg/" coverage.out \
 		| awk -F'[ \t]+' '{stmts+=$$2; if($$3>0) covered+=$$2} END {if(stmts>0) printf "  %-30s %4d/%-4d  %.1f%%\n", pkg, covered, stmts, covered/stmts*100}' pkg="$$pkg"; \
 	done
@@ -58,6 +58,12 @@ generate-check: generate
 		exit 1; \
 	fi
 
+vulncheck:
+	go run golang.org/x/vuln/cmd/govulncheck@d1f380186385b4f64e00313f31743df8e4b89a77 ./...
+
+actionlint:
+	go run github.com/rhysd/actionlint/cmd/actionlint@393031adb9afb225ee52ae2ccd7a5af5525e03e8
+
 clean:
 	rm -rf bin/ coverage.out coverage.raw.out coverage.html
 
@@ -65,7 +71,7 @@ help: ## Show available targets
 	@echo "Usage: make [target]"
 	@echo ""
 	@echo "Targets:"
-	@echo "  all              Run fmt-check, lint, cover, generate-check, and build"
+	@echo "  all              Run fmt-check, lint, cover, generate-check, vulncheck, actionlint, and build"
 	@echo "  fmt              Format Go source files"
 	@echo "  fix              Apply Go fix rewrites"
 	@echo "  fmt-check        Check formatting (CI)"
@@ -76,5 +82,7 @@ help: ## Show available targets
 	@echo "  build            Build binary to bin/hashi"
 	@echo "  generate         Regenerate moq mocks"
 	@echo "  generate-check   Verify generated mocks are up to date (CI)"
+	@echo "  vulncheck        Run Go vulnerability check"
+	@echo "  actionlint       Lint GitHub Actions workflows"
 	@echo "  clean            Remove build artifacts"
 	@echo "  help             Show this help"
