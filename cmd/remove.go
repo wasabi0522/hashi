@@ -69,20 +69,37 @@ func removeWarnings(check resource.RemoveCheck) []string {
 	return w
 }
 
-func buildRemovePrompt(check resource.RemoveCheck) string {
-	if !check.HasBranch {
-		return fmt.Sprintf("Branch '%s' not found. Clean up orphaned resources?", check.Branch)
+func resourceList(check resource.RemoveCheck) string {
+	var res []string
+	if check.HasBranch {
+		res = append(res, "branch")
 	}
+	if check.HasWorktree {
+		res = append(res, "worktree")
+	}
+	if check.HasWindow {
+		res = append(res, "window")
+	}
+	return strings.Join(res, ", ")
+}
 
-	warnings := removeWarnings(check)
-	if len(warnings) == 0 {
-		return fmt.Sprintf("Remove '%s'?", check.Branch)
+// buildRemovePrompt builds a confirmation message for removal.
+// Precondition: check.HasResources() is true.
+func buildRemovePrompt(check resource.RemoveCheck) string {
+	resources := resourceList(check)
+	prompt := fmt.Sprintf("Remove '%s'? (%s)", check.Branch, resources)
+
+	if !check.NeedsWarning() {
+		return prompt
 	}
-	return fmt.Sprintf("Remove '%s'? (%s)", check.Branch, strings.Join(warnings, ", "))
+	for _, w := range removeWarnings(check) {
+		prompt += fmt.Sprintf("\n  %s %s", ui.Yellow("⚠"), w)
+	}
+	return prompt
 }
 
 func confirmPrompt(cmd *cobra.Command, message string) bool {
-	_, _ = fmt.Fprintf(cmd.OutOrStderr(), "%s [y/N] ", message)
+	_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "%s y/N [N] ", message)
 	scanner := bufio.NewScanner(cmd.InOrStdin())
 	if scanner.Scan() {
 		answer := strings.TrimSpace(strings.ToLower(scanner.Text()))

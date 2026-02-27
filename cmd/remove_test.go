@@ -14,6 +14,7 @@ import (
 	"github.com/wasabi0522/hashi/internal/git"
 	"github.com/wasabi0522/hashi/internal/resource"
 	"github.com/wasabi0522/hashi/internal/tmux"
+	"github.com/wasabi0522/hashi/internal/ui"
 )
 
 func TestRemoveCmd(t *testing.T) {
@@ -23,6 +24,9 @@ func TestRemoveCmd(t *testing.T) {
 }
 
 func TestBuildRemovePrompt(t *testing.T) {
+	ui.SetNoColor(true)
+	t.Cleanup(func() { ui.SetNoColor(false) })
+
 	tests := []struct {
 		name     string
 		check    resource.RemoveCheck
@@ -30,29 +34,48 @@ func TestBuildRemovePrompt(t *testing.T) {
 		exact    string
 	}{
 		{
-			name:  "simple removal",
+			name:  "branch only",
 			check: resource.RemoveCheck{Branch: "feature", HasBranch: true},
-			exact: "Remove 'feature'?",
+			exact: "Remove 'feature'? (branch)",
 		},
 		{
-			name:     "uncommitted changes warning",
-			check:    resource.RemoveCheck{Branch: "feature", HasBranch: true, HasUncommitted: true},
-			contains: []string{"uncommitted changes"},
+			name:  "all resources",
+			check: resource.RemoveCheck{Branch: "feature", HasBranch: true, HasWorktree: true, HasWindow: true},
+			exact: "Remove 'feature'? (branch, worktree, window)",
 		},
 		{
-			name:     "unmerged warning",
+			name:     "uncommitted changes warning on separate line",
+			check:    resource.RemoveCheck{Branch: "feature", HasBranch: true, HasWorktree: true, HasUncommitted: true},
+			contains: []string{"(branch, worktree)", "\n  ⚠ has uncommitted changes"},
+		},
+		{
+			name:     "unmerged warning on separate line",
 			check:    resource.RemoveCheck{Branch: "feature", HasBranch: true, IsUnmerged: true},
-			contains: []string{"unmerged commits"},
+			contains: []string{"(branch)", "\n  ⚠ has unmerged commits"},
 		},
 		{
-			name:     "both warnings",
-			check:    resource.RemoveCheck{Branch: "feature", HasBranch: true, HasUncommitted: true, IsUnmerged: true},
-			contains: []string{"uncommitted changes", "unmerged commits"},
+			name:  "both warnings on separate lines",
+			check: resource.RemoveCheck{Branch: "feature", HasBranch: true, HasWorktree: true, HasWindow: true, HasUncommitted: true, IsUnmerged: true},
+			contains: []string{
+				"(branch, worktree, window)",
+				"\n  ⚠ has uncommitted changes",
+				"\n  ⚠ has unmerged commits",
+			},
 		},
 		{
-			name:     "orphaned resources",
-			check:    resource.RemoveCheck{Branch: "orphan", HasWindow: true},
-			contains: []string{"not found"},
+			name:  "orphaned worktree and window",
+			check: resource.RemoveCheck{Branch: "orphan", HasWorktree: true, HasWindow: true},
+			exact: "Remove 'orphan'? (worktree, window)",
+		},
+		{
+			name:  "orphaned window only",
+			check: resource.RemoveCheck{Branch: "orphan", HasWindow: true},
+			exact: "Remove 'orphan'? (window)",
+		},
+		{
+			name:  "orphaned worktree only",
+			check: resource.RemoveCheck{Branch: "orphan", HasWorktree: true},
+			exact: "Remove 'orphan'? (worktree)",
 		},
 	}
 
@@ -75,7 +98,8 @@ func TestConfirmPrompt(t *testing.T) {
 		input string
 		want  bool
 	}{
-		{"yes", "y\n", true},
+		{"y", "y\n", true},
+		{"yes", "yes\n", true},
 		{"YES (case insensitive)", "YES\n", true},
 		{"no", "n\n", false},
 		{"empty input", "\n", false},
@@ -86,8 +110,10 @@ func TestConfirmPrompt(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd := &cobra.Command{}
 			cmd.SetIn(strings.NewReader(tt.input))
-			cmd.SetErr(&bytes.Buffer{})
+			var buf bytes.Buffer
+			cmd.SetErr(&buf)
 			assert.Equal(t, tt.want, confirmPrompt(cmd, "Delete?"))
+			assert.Contains(t, buf.String(), "y/N [N]")
 		})
 	}
 }
