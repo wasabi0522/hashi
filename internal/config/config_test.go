@@ -81,6 +81,26 @@ func TestLoad(t *testing.T) {
 		assert.Contains(t, err.Error(), "..")
 	})
 
+	t.Run("copy_files absolute path rejected", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, ".hashi.yaml")
+		require.NoError(t, os.WriteFile(path, []byte("hooks:\n  copy_files:\n    - /etc/passwd\n"), 0644))
+
+		_, err := Load(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "relative path")
+	})
+
+	t.Run("copy_files path traversal rejected", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, ".hashi.yaml")
+		require.NoError(t, os.WriteFile(path, []byte("hooks:\n  copy_files:\n    - ../../etc/passwd\n"), 0644))
+
+		_, err := Load(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "..")
+	})
+
 	t.Run("bare keys without values", func(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, ".hashi.yaml")

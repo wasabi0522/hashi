@@ -160,12 +160,12 @@ func (s *Service) finalizeOperation(op OperationType, branch, wtPath string, wtC
 
 // buildInitCmd builds the tmux initial command string for post_new hooks.
 // Each hook runs in its own sh -c subshell with fail-fast behavior.
+// shell is the user's login shell (e.g. from $SHELL); falls back to "sh" if empty.
 // Returns "" if no hooks or worktree was not created.
-func (s *Service) buildInitCmd(wtCreated bool) string {
+func (s *Service) buildInitCmd(wtCreated bool, shell string) string {
 	if !wtCreated || len(s.cp.PostNewHooks) == 0 {
 		return ""
 	}
-	shell := os.Getenv("SHELL")
 	if shell == "" {
 		shell = "sh"
 	}
@@ -174,7 +174,7 @@ func (s *Service) buildInitCmd(wtCreated bool) string {
 		quoted = append(quoted, shellQuote(h))
 	}
 	return fmt.Sprintf("for __cmd in %s; do sh -c \"$__cmd\" || exit 1; done; exec %s",
-		strings.Join(quoted, " "), shell)
+		strings.Join(quoted, " "), shellQuote(shell))
 }
 
 // copyFiles copies configured files and directories from repo root to the worktree.
@@ -190,6 +190,9 @@ func (s *Service) copyFiles(wtPath string) error {
 		}
 		if err != nil {
 			return fmt.Errorf("stat %s: %w", rel, err)
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			continue // skip symlinks to prevent following links outside the repo
 		}
 
 		if info.IsDir() {
@@ -210,6 +213,9 @@ func copyDir(src, dst string) error {
 	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
+		}
+		if d.Type()&os.ModeSymlink != 0 {
+			return nil // skip symlinks to prevent following links outside the repo
 		}
 		rel, err := filepath.Rel(src, path)
 		if err != nil {

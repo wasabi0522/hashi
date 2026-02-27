@@ -26,8 +26,9 @@ func (a *App) removeCmd(completeBranches completionFunc) *cobra.Command {
 	return cmd
 }
 
+// runRemove resolves deps directly instead of withService because it needs
+// the service across a multi-branch loop with per-branch user prompts.
 func (a *App) runRemove(cmd *cobra.Command, args []string, force bool) error {
-
 	d, err := a.resolveDeps(true)
 	if err != nil {
 		return err

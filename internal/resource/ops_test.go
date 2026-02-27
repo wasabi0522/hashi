@@ -282,28 +282,26 @@ func TestConnect(t *testing.T) {
 
 func TestBuildInitCmd(t *testing.T) {
 	t.Run("builds for loop with sh -c and appends exec shell", func(t *testing.T) {
-		t.Setenv("SHELL", "/bin/zsh")
 		svc := NewService(nil, nil, nil, WithCommonParams(CommonParams{
 			PostNewHooks: []string{"npm install", "echo done"},
 		}))
-		cmd := svc.buildInitCmd(true)
-		assert.Equal(t, "for __cmd in 'npm install' 'echo done'; do sh -c \"$__cmd\" || exit 1; done; exec /bin/zsh", cmd)
+		cmd := svc.buildInitCmd(true, "/bin/zsh")
+		assert.Equal(t, "for __cmd in 'npm install' 'echo done'; do sh -c \"$__cmd\" || exit 1; done; exec '/bin/zsh'", cmd)
 	})
 
 	t.Run("single hook", func(t *testing.T) {
-		t.Setenv("SHELL", "/bin/bash")
 		svc := NewService(nil, nil, nil, WithCommonParams(CommonParams{
 			PostNewHooks: []string{"npm install"},
 		}))
-		cmd := svc.buildInitCmd(true)
-		assert.Equal(t, "for __cmd in 'npm install'; do sh -c \"$__cmd\" || exit 1; done; exec /bin/bash", cmd)
+		cmd := svc.buildInitCmd(true, "/bin/bash")
+		assert.Equal(t, "for __cmd in 'npm install'; do sh -c \"$__cmd\" || exit 1; done; exec '/bin/bash'", cmd)
 	})
 
 	t.Run("empty hooks returns empty string", func(t *testing.T) {
 		svc := NewService(nil, nil, nil, WithCommonParams(CommonParams{
 			PostNewHooks: nil,
 		}))
-		cmd := svc.buildInitCmd(true)
+		cmd := svc.buildInitCmd(true, "/bin/zsh")
 		assert.Empty(t, cmd)
 	})
 
@@ -311,26 +309,24 @@ func TestBuildInitCmd(t *testing.T) {
 		svc := NewService(nil, nil, nil, WithCommonParams(CommonParams{
 			PostNewHooks: []string{"echo hello"},
 		}))
-		cmd := svc.buildInitCmd(false)
+		cmd := svc.buildInitCmd(false, "/bin/zsh")
 		assert.Empty(t, cmd)
 	})
 
-	t.Run("falls back to sh when SHELL is empty", func(t *testing.T) {
-		t.Setenv("SHELL", "")
+	t.Run("falls back to sh when shell is empty", func(t *testing.T) {
 		svc := NewService(nil, nil, nil, WithCommonParams(CommonParams{
 			PostNewHooks: []string{"echo hello"},
 		}))
-		cmd := svc.buildInitCmd(true)
-		assert.Equal(t, "for __cmd in 'echo hello'; do sh -c \"$__cmd\" || exit 1; done; exec sh", cmd)
+		cmd := svc.buildInitCmd(true, "")
+		assert.Equal(t, "for __cmd in 'echo hello'; do sh -c \"$__cmd\" || exit 1; done; exec 'sh'", cmd)
 	})
 
 	t.Run("escapes single quotes in hooks", func(t *testing.T) {
-		t.Setenv("SHELL", "/bin/zsh")
 		svc := NewService(nil, nil, nil, WithCommonParams(CommonParams{
 			PostNewHooks: []string{"echo 'hello'"},
 		}))
-		cmd := svc.buildInitCmd(true)
-		assert.Equal(t, "for __cmd in 'echo '\\''hello'\\'''; do sh -c \"$__cmd\" || exit 1; done; exec /bin/zsh", cmd)
+		cmd := svc.buildInitCmd(true, "/bin/zsh")
+		assert.Equal(t, "for __cmd in 'echo '\\''hello'\\'''; do sh -c \"$__cmd\" || exit 1; done; exec '/bin/zsh'", cmd)
 	})
 }
 

@@ -53,7 +53,7 @@ func (s *Service) Rename(ctx context.Context, p RenameParams) (*OperationResult,
 	}
 
 	// Handle tmux
-	initCmd := s.buildInitCmd(wtCreated)
+	initCmd := s.buildInitCmd(wtCreated, os.Getenv("SHELL"))
 	s.renameTmuxWindow(p, wtPath, initCmd)
 
 	// Best-effort connect to the renamed window (aligns with New/Switch behavior)

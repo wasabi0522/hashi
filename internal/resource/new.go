@@ -3,6 +3,7 @@ package resource
 import (
 	"context"
 	"fmt"
+	"os"
 )
 
 // NewParams holds parameters for the New operation.
@@ -66,7 +67,7 @@ func (s *Service) New(ctx context.Context, p NewParams) (*OperationResult, error
 	}
 
 	// Ensure tmux (best-effort rollback on failure)
-	initCmd := s.buildInitCmd(wtCreated)
+	initCmd := s.buildInitCmd(wtCreated, os.Getenv("SHELL"))
 	if err := s.ensureTmux(s.cp.SessionName, p.Branch, wtPath, initCmd); err != nil {
 		s.rollbackNew(wtCreated, branchCreated, wtPath, p.Branch)
 		return nil, err

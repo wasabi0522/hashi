@@ -24,7 +24,7 @@ func (a *App) BuildRootCmd() *cobra.Command {
 	rootCmd.PersistentFlags().BoolVarP(&a.verbose, "verbose", "v", false, "Enable verbose logging")
 
 	defaultExec := hashiexec.NewDefaultExecutor()
-	completeBranches := func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	completeBranches := func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		return completeBranchesWithExec(defaultExec)
 	}
 

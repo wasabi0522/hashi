@@ -47,10 +47,6 @@ func defaultResolveDeps(requireTmux bool) (*deps, error) {
 	return doResolveDeps(resolveOpts{exec: hashiexec.NewDefaultExecutor(), requireTmux: requireTmux})
 }
 
-func resolveDepsWithExec(e hashiexec.Executor) (*deps, error) {
-	return doResolveDeps(resolveOpts{exec: e, requireTmux: true})
-}
-
 func buildGitContext(e hashiexec.Executor) (git.Client, *hashicontext.Context, error) {
 	if err := e.LookPath("git"); err != nil {
 		return nil, nil, fmt.Errorf("required command 'git' not found")

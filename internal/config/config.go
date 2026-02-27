@@ -32,37 +32,23 @@ type Hooks struct {
 // Missing file is not an error; defaults are used.
 // Priority: environment variables > file > defaults.
 func Load(path string) (*Config, error) {
-	k := koanf.New(".")
+	k := newKoanfWithDefaults()
 
-	// 1. Defaults — confmap.Provider wraps an in-memory map and never fails.
-	_ = k.Load(confmap.Provider(map[string]any{
-		"worktree_dir": ".worktrees",
-	}, "."), nil)
-
-	// 2. YAML file (overrides defaults)
+	// YAML file (overrides defaults)
 	if err := k.Load(file.Provider(path), yaml.Parser()); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			return nil, fmt.Errorf("loading config %s: %w", path, err)
 		}
 	}
 
-	// 3. Environment variables (highest priority)
+	// Environment variables (highest priority)
 	if err := k.Load(env.Provider("HASHI_", ".", func(s string) string {
 		return strings.ToLower(strings.TrimPrefix(s, "HASHI_"))
 	}), nil); err != nil {
 		return nil, fmt.Errorf("loading env config: %w", err)
 	}
 
-	var cfg Config
-	if err := k.Unmarshal("", &cfg); err != nil {
-		return nil, fmt.Errorf("parsing config: %w", err)
-	}
-
-	if err := cfg.validate(); err != nil {
-		return nil, err
-	}
-
-	return &cfg, nil
+	return unmarshalAndValidate(k)
 }
 
 // LoadFromReader reads configuration from an io.Reader containing YAML.
@@ -73,24 +59,33 @@ func LoadFromReader(r io.Reader) (*Config, error) {
 		return nil, fmt.Errorf("reading config: %w", err)
 	}
 
-	k := koanf.New(".")
-	_ = k.Load(confmap.Provider(map[string]any{
-		"worktree_dir": ".worktrees",
-	}, "."), nil)
+	k := newKoanfWithDefaults()
 
 	if err := k.Load(rawbytes.Provider(data), yaml.Parser()); err != nil {
 		return nil, fmt.Errorf("parsing config: %w", err)
 	}
 
+	return unmarshalAndValidate(k)
+}
+
+// newKoanfWithDefaults creates a koanf instance pre-loaded with default values.
+func newKoanfWithDefaults() *koanf.Koanf {
+	k := koanf.New(".")
+	_ = k.Load(confmap.Provider(map[string]any{
+		"worktree_dir": ".worktrees",
+	}, "."), nil)
+	return k
+}
+
+// unmarshalAndValidate unmarshals a koanf instance into Config and validates it.
+func unmarshalAndValidate(k *koanf.Koanf) (*Config, error) {
 	var cfg Config
 	if err := k.Unmarshal("", &cfg); err != nil {
 		return nil, fmt.Errorf("parsing config: %w", err)
 	}
-
 	if err := cfg.validate(); err != nil {
 		return nil, err
 	}
-
 	return &cfg, nil
 }
 
@@ -103,6 +98,14 @@ func (c *Config) validate() error {
 	}
 	if c.WorktreeDir == "." {
 		return fmt.Errorf("worktree_dir must not be '.': worktrees would be created directly in the repository root")
+	}
+	for _, f := range c.Hooks.CopyFiles {
+		if filepath.IsAbs(f) {
+			return fmt.Errorf("copy_files entry must be a relative path: %s", f)
+		}
+		if strings.Contains(f, "..") {
+			return fmt.Errorf("copy_files entry must not contain '..': %s", f)
+		}
 	}
 	return nil
 }

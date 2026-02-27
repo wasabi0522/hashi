@@ -9,6 +9,11 @@ import (
 	hashiexec "github.com/wasabi0522/hashi/internal/exec"
 )
 
+// resolveDepsWithExec is a test helper that resolves deps using the given Executor.
+func resolveDepsWithExec(e hashiexec.Executor) (*deps, error) {
+	return doResolveDeps(resolveOpts{exec: e, requireTmux: true})
+}
+
 func TestResolveDepsWithExec(t *testing.T) {
 	t.Run("git not found", func(t *testing.T) {
 		e := &hashiexec.ExecutorMock{

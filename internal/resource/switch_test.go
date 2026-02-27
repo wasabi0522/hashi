@@ -132,7 +132,7 @@ func TestSwitch(t *testing.T) {
 
 		assert.Contains(t, capturedInitCmd, "echo hello")
 		assert.Contains(t, capturedInitCmd, "sh -c")
-		assert.Contains(t, capturedInitCmd, "exec /bin/bash")
+		assert.Contains(t, capturedInitCmd, "exec '/bin/bash'")
 	})
 
 	t.Run("EnsureTmux error", func(t *testing.T) {

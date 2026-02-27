@@ -92,20 +92,29 @@ const (
 	StatusOrphanedWorktree
 )
 
-var statusStrings = [...]string{
-	StatusOK:               "ok",
-	StatusWorktreeMissing:  "worktree_missing",
-	StatusOrphanedWindow:   "orphaned_window",
-	StatusOrphanedWorktree: "orphaned_worktree",
+// statusMeta holds all metadata for a single Status value.
+type statusMeta struct {
+	name    string // serialized name (e.g. "ok", "worktree_missing")
+	label   string // human-readable label for unhealthy statuses
+	suggest string // hashi subcommand to fix an unhealthy status
+}
+
+var statusTable = [...]statusMeta{
+	StatusOK:               {name: "ok"},
+	StatusWorktreeMissing:  {name: "worktree_missing", label: "worktree missing", suggest: "new"},
+	StatusOrphanedWindow:   {name: "orphaned_window", label: "orphaned window", suggest: "remove"},
+	StatusOrphanedWorktree: {name: "orphaned_worktree", label: "orphaned worktree", suggest: "remove"},
+}
+
+func (s Status) meta() statusMeta {
+	if int(s) < len(statusTable) {
+		return statusTable[s]
+	}
+	return statusMeta{name: "unknown"}
 }
 
 // String returns the string representation of the Status.
-func (s Status) String() string {
-	if int(s) < len(statusStrings) {
-		return statusStrings[s]
-	}
-	return "unknown"
-}
+func (s Status) String() string { return s.meta().name }
 
 // MarshalJSON returns the JSON encoding of the Status.
 func (s Status) MarshalJSON() ([]byte, error) {
@@ -115,8 +124,8 @@ func (s Status) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON parses a JSON string into a Status.
 func (s *Status) UnmarshalJSON(data []byte) error {
 	str := strings.Trim(string(data), `"`)
-	for i, v := range statusStrings {
-		if v == str {
+	for i, m := range statusTable {
+		if m.name == str {
 			*s = Status(i)
 			return nil
 		}
@@ -125,41 +134,15 @@ func (s *Status) UnmarshalJSON(data []byte) error {
 }
 
 // IsHealthy reports whether the status indicates all resources are present.
-func (s Status) IsHealthy() bool {
-	return s == StatusOK
-}
+func (s Status) IsHealthy() bool { return s == StatusOK }
 
 // Label returns a human-readable label for unhealthy statuses.
 // Returns an empty string for StatusOK or unknown status values.
-func (s Status) Label() string {
-	switch s {
-	case StatusOK:
-		return ""
-	case StatusWorktreeMissing:
-		return "worktree missing"
-	case StatusOrphanedWindow:
-		return "orphaned window"
-	case StatusOrphanedWorktree:
-		return "orphaned worktree"
-	default:
-		return ""
-	}
-}
+func (s Status) Label() string { return s.meta().label }
 
 // SuggestedCommand returns the hashi subcommand to fix an unhealthy status.
 // Returns an empty string for StatusOK or unknown status values.
-func (s Status) SuggestedCommand() string {
-	switch s {
-	case StatusOK:
-		return ""
-	case StatusWorktreeMissing:
-		return "new"
-	case StatusOrphanedWindow, StatusOrphanedWorktree:
-		return "remove"
-	default:
-		return ""
-	}
-}
+func (s Status) SuggestedCommand() string { return s.meta().suggest }
 
 // OperationType represents the kind of resource operation performed.
 type OperationType int

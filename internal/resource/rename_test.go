@@ -381,6 +381,6 @@ func TestRename(t *testing.T) {
 
 		assert.Contains(t, capturedInitCmd, "echo hello")
 		assert.Contains(t, capturedInitCmd, "sh -c")
-		assert.Contains(t, capturedInitCmd, "exec /bin/zsh")
+		assert.Contains(t, capturedInitCmd, "exec '/bin/zsh'")
 	})
 }

@@ -21,6 +21,10 @@ var branchRules = []branchRule{
 	{func(n string) bool { return strings.Contains(n, "..") }, "branch name contains '..'"},
 	{func(n string) bool { return strings.Contains(n, "@{") }, "branch name contains '@{'"},
 	{func(n string) bool { return strings.HasPrefix(n, "-") }, "branch name must not start with '-'"},
+	{func(n string) bool { return strings.HasPrefix(n, ".") }, "branch name must not start with '.'"},
+	{func(n string) bool { return strings.HasSuffix(n, ".") }, "branch name must not end with '.'"},
+	{func(n string) bool { return strings.HasSuffix(n, "/") }, "branch name must not end with '/'"},
+	{func(n string) bool { return strings.Contains(n, "//") }, "branch name contains '//'"},
 	{func(n string) bool { return strings.HasSuffix(n, ".lock") }, "branch name must not end with '.lock'"},
 }
 

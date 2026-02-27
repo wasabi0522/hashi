@@ -13,6 +13,7 @@ import (
 
 // newExitCodeState returns an *os.ProcessState with the given exit code.
 // It does this by running a subprocess that exits with that code.
+// Requires "sh" in PATH (standard on all Unix-like systems).
 func newExitCodeState(code int) *os.ProcessState {
 	cmd := osexec.Command("sh", "-c", fmt.Sprintf("exit %d", code))
 	_ = cmd.Run()

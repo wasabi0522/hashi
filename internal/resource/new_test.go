@@ -239,7 +239,7 @@ func TestNew(t *testing.T) {
 
 		assert.Contains(t, capturedInitCmd, "echo hello")
 		assert.Contains(t, capturedInitCmd, "sh -c")
-		assert.Contains(t, capturedInitCmd, "exec /bin/zsh")
+		assert.Contains(t, capturedInitCmd, "exec '/bin/zsh'")
 	})
 
 	t.Run("AddWorktreeNewBranch error", func(t *testing.T) {
