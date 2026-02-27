@@ -111,15 +111,15 @@ Removed 'fix/typo'
 
 ## Commands
 
-| Command                         | Description                                       |
-| ------------------------------- | ------------------------------------------------- |
-| `hashi new <branch> [base]`     | Create a branch with its worktree and tmux window |
-| `hashi switch <branch>`         | Switch to an existing branch and its tmux window  |
-| `hashi list [--json]`           | List all managed branches, worktrees, and windows |
-| `hashi rename <old> <new>`      | Rename a branch, worktree, and window together    |
-| `hashi remove [-f] <branch...>` | Remove branches, worktrees, and windows together  |
-| `hashi init`                    | Generate a `.hashi.yaml` config template          |
-| `hashi completion <shell>`      | Output shell completion script (bash/zsh/fish)    |
+| Command                         | Alias      | Description                                       |
+| ------------------------------- | ---------- | ------------------------------------------------- |
+| `hashi new <branch> [base]`     | `n`        | Create a branch with its worktree and tmux window |
+| `hashi switch <branch>`         | `sw`       | Switch to an existing branch and its tmux window  |
+| `hashi list [--json]`           | `ls`       | List all managed branches, worktrees, and windows |
+| `hashi rename <old> <new>`      | `mv`       | Rename a branch, worktree, and window together    |
+| `hashi remove [-f] <branch...>` | `rm`       | Remove branches, worktrees, and windows together  |
+| `hashi init`                    |            | Generate a `.hashi.yaml` config template          |
+| `hashi completion <shell>`      |            | Output shell completion script (bash/zsh/fish)    |
 
 hashi manages local resources only — it never runs `git push`, `git pull`, or modifies remote branches.
 
@@ -158,13 +158,18 @@ If resources get out of sync (e.g. a tmux window was closed manually), `hashi li
 
 #### Session and window naming
 
-hashi derives the tmux session name from the git remote URL:
+hashi derives the tmux session name from the git remote URL with an `hs/` prefix. Window names carry the same prefix:
 
 ```
-git@github.com:user/repo.git  →  tmux session: user/repo
+git@github.com:user/repo.git  →  tmux session: hs/user/repo
+                                  tmux window:  hs/feature/login
 ```
 
-Each branch becomes a tmux window within that session. Your tmux status bar becomes a branch list.
+If no remote is configured, the directory name is used instead (e.g. `hs/my-project`).
+
+Special characters in the name are sanitized: `:` and whitespace become `-`, leading dots are removed.
+
+Your tmux status bar becomes a branch list.
 
 #### Rollback on failure
 
@@ -200,7 +205,7 @@ hooks:
 
 Environment variables (`HASHI_` prefix) override the config file. For example, `HASHI_WORKTREE_DIR=.wt` overrides `worktree_dir`.
 
-Run `hashi init` to generate a commented-out template.
+Run `hashi init` to generate a commented-out template. See also the [`.hashi.yaml`](.hashi.yaml) in this repository for a real-world example.
 
 ## License
 
