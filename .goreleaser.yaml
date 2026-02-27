@@ -12,16 +12,23 @@ builds:
     ldflags:
       - -s -w -X github.com/wasabi0522/hashi/cmd.version={{.Version}}
 
-brews:
+homebrew_casks:
   - repository:
       owner: wasabi0522
       name: homebrew-tap
     homepage: https://github.com/wasabi0522/hashi
     description: Git worktree + tmux session manager
-    install: |
-      bin.install "hashi"
-    test: |
-      system "#{bin}/hashi", "--version"
+    license: MIT
+    binaries:
+      - hashi
+    url:
+      verified: github.com/wasabi0522/hashi
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/hashi"]
+          end
 
 archives:
   - formats: ['tar.gz']
