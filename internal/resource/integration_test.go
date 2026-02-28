@@ -195,7 +195,7 @@ func TestIntegration_RemoveFromInsideWorktree(t *testing.T) {
 
 	// Move CWD into the worktree that will be deleted
 	wtPath := filepath.Join(repoRoot, ".worktrees", "cwd-test")
-	require.NoError(t, os.Chdir(wtPath))
+	t.Chdir(wtPath)
 
 	// Remove should succeed even though CWD is inside the deleted worktree
 	check, err := svc.PrepareRemove(context.Background(), "cwd-test")

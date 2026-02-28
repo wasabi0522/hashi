@@ -46,7 +46,7 @@ func toMap[T any, K comparable](items []T, key func(T) K) map[K]T {
 }
 
 // shellQuote wraps s in POSIX single quotes, escaping any embedded single quotes
-// using the '\" technique (end quote, escaped quote, start quote).
+// using the '\'' technique (end quote, escaped quote, start quote).
 func shellQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
 }

@@ -3,3 +3,4 @@ bin/
 coverage.html
 *.exe
 .worktrees/
+CLAUDE.md
