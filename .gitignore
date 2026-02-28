@@ -4,3 +4,4 @@ coverage.html
 *.exe
 .worktrees/
 CLAUDE.md
+.claude/
