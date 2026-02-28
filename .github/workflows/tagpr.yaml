@@ -18,38 +18,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-      - name: Debug GITHUB_TOKEN permissions
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "=== head=branch name ==="
-          curl -s -w "\nstatus=%{http_code}\n" \
-            -X POST \
-            -H "Authorization: token $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -d '{"base":"tagpr-temp","head":"main"}' \
-            "https://api.github.com/repos/${{ github.repository }}/merges" | jq -r '.message // .sha'
-          echo "=== head=main HEAD commit ==="
-          curl -s -w "\nstatus=%{http_code}\n" \
-            -X POST \
-            -H "Authorization: token $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -d "{\"base\":\"tagpr-temp\",\"head\":\"${{ github.sha }}\"}" \
-            "https://api.github.com/repos/${{ github.repository }}/merges" | jq -r '.message // .sha'
-          echo "=== head=tagpr-from-v0.0.0 branch ==="
-          curl -s -w "\nstatus=%{http_code}\n" \
-            -X POST \
-            -H "Authorization: token $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -d '{"base":"tagpr-temp","head":"tagpr-from-v0.0.0"}' \
-            "https://api.github.com/repos/${{ github.repository }}/merges" | jq -r '.message // .sha'
-          echo "=== head=92a813f (commit on tagpr-from-v0.0.0) ==="
-          curl -s -w "\nstatus=%{http_code}\n" \
-            -X POST \
-            -H "Authorization: token $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -d '{"base":"tagpr-temp","head":"92a813f"}' \
-            "https://api.github.com/repos/${{ github.repository }}/merges" | jq -r '.message // .sha'
       - uses: Songmu/tagpr@b3fb89424646b06c8aa460f50307c60b6a541425 # v1.17.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
