@@ -71,6 +71,24 @@ func TestPrefixedClient_ListWindows(t *testing.T) {
 	assert.False(t, ws[1].Active)
 }
 
+func TestPrefixedClient_ListWindows_filtersUnmanaged(t *testing.T) {
+	inner := newMock()
+	inner.ListWindowsFunc = func(session string) ([]Window, error) {
+		return []Window{
+			{Name: "hs/main", Active: true},
+			{Name: "debug", Active: false},
+			{Name: "hs/feat", Active: false},
+			{Name: "htop", Active: false},
+		}, nil
+	}
+	c := NewPrefixedClient(inner, "hs/")
+	ws, err := c.ListWindows("sess")
+	require.NoError(t, err)
+	require.Len(t, ws, 2, "windows without hs/ prefix should be excluded")
+	assert.Equal(t, "main", ws[0].Name)
+	assert.Equal(t, "feat", ws[1].Name)
+}
+
 func TestPrefixedClient_NewWindow(t *testing.T) {
 	inner := newMock()
 	inner.NewWindowFunc = func(session, name, dir, initCmd string) error {
