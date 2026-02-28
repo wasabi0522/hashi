@@ -54,10 +54,15 @@ func (p *prefixedClient) ListWindows(session string) ([]Window, error) {
 	if err != nil {
 		return nil, err
 	}
-	for i := range windows {
-		windows[i].Name = p.strip(windows[i].Name)
+	managed := windows[:0]
+	for _, w := range windows {
+		if !strings.HasPrefix(w.Name, p.prefix) {
+			continue
+		}
+		w.Name = p.strip(w.Name)
+		managed = append(managed, w)
 	}
-	return windows, nil
+	return managed, nil
 }
 
 func (p *prefixedClient) NewWindow(session, name, dir, initCmd string) error {
