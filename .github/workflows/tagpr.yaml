@@ -22,18 +22,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "=== Token permissions check ==="
-          curl -s -o /dev/null -w "status=%{http_code}" \
-            -H "Authorization: token $GH_TOKEN" \
+          echo "=== Bearer auth (go-github style) ==="
+          curl -s -w "\nstatus=%{http_code}\n" \
+            -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${{ github.repository }}"
-          echo ""
-          echo "=== Merges API test ==="
+            -d '{"base":"tagpr-temp","head":"92a813f"}' \
+            "https://api.github.com/repos/${{ github.repository }}/merges" | head -5
+          echo "=== Token auth (curl style) ==="
           curl -s -w "\nstatus=%{http_code}\n" \
             -X POST \
             -H "Authorization: token $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
-            -d '{"base":"tagpr-temp","head":"main"}' \
+            -d '{"base":"tagpr-temp","head":"92a813f"}' \
             "https://api.github.com/repos/${{ github.repository }}/merges" | head -5
       - uses: Songmu/tagpr@b3fb89424646b06c8aa460f50307c60b6a541425 # v1.17.1
         env:
