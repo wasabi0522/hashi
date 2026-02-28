@@ -105,7 +105,7 @@ hashi remove fix/typo
 ```
 
 ```
-Remove 'fix/typo'? [y/N] y
+Remove 'fix/typo'? (branch, worktree, window) y/N [N] y
 Removed 'fix/typo'
 ```
 

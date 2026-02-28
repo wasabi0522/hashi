@@ -21,7 +21,7 @@ git branch ─── git worktree ─── tmux window
                               tmux session (one per repository)
 ```
 
-- **tmux session**: One per repository. Named in `org/repo` format
+- **tmux session**: One per repository. Named in `hs/org/repo` format
 - **tmux window**: One per branch. Opens in the worktree directory
 - **git worktree**: One per branch. Located at `.worktrees/<branch>/` (the default branch uses the repository root)
 
@@ -66,7 +66,11 @@ All commands require branch names to follow these rules:
 | Must not contain `..` | `feature..login` | `branch name contains '..'` |
 | Must not contain `@{` | `feature@{0}` | `branch name contains '@{'` |
 | Must not start with `-` | `-feature` | `branch name must not start with '-'` |
+| Must not start with `.` | `.feature` | `branch name must not start with '.'` |
+| Must not end with `.` | `feature.` | `branch name must not end with '.'` |
+| Must not end with `/` | `feature/` | `branch name must not end with '/'` |
 | Must not end with `.lock` | `feature.lock` | `branch name must not end with '.lock'` |
+| Must not contain `//` | `feat//login` | `branch name contains '//'` |
 
 These rules conform to git's branch naming conventions.
 
@@ -265,7 +269,7 @@ If only a worktree or tmux window remains (e.g., after directly deleting a branc
 
 ```
 $ hashi remove orphan-branch
-Branch 'orphan-branch' not found. Clean up orphaned resources? [y/N] y
+Remove 'orphan-branch'? (worktree) y/N [N] y
 Removed 'orphan-branch'
 ```
 
