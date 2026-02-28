@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 .PHONY: all fmt fix fmt-check lint test cover cover-html build generate generate-check vulncheck actionlint clean help
 
 all: fmt-check lint cover generate-check vulncheck actionlint build
