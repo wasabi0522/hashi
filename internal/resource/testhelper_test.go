@@ -26,6 +26,13 @@ func mockBranchExists(existing ...string) func(string) (bool, error) {
 	}
 }
 
+// mockListBranches returns a ListBranchesFunc that returns the given branches.
+func mockListBranches(existing ...string) func() ([]string, error) {
+	return func() ([]string, error) {
+		return existing, nil
+	}
+}
+
 // stubTmux returns a tmux.ClientMock with no-op session/window funcs.
 func stubTmux() *tmux.ClientMock {
 	return &tmux.ClientMock{
@@ -53,5 +60,5 @@ func stubTmuxInside() *tmux.ClientMock {
 
 // newTestSvc creates a Service with mock git and tmux clients using NewService.
 func newTestSvc(g git.Client, tm tmux.Client, opts ...Option) *Service {
-	return NewService(nil, g, tm, opts...)
+	return NewService(g, tm, opts...)
 }

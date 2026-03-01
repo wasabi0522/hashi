@@ -1,13 +1,12 @@
 package context
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
-	osexec "os/exec"
 	"path/filepath"
 	"strings"
 
+	hashiexec "github.com/wasabi0522/hashi/internal/exec"
 	"github.com/wasabi0522/hashi/internal/git"
 )
 
@@ -66,8 +65,7 @@ func (r *Resolver) resolveDefaultBranch() (string, error) {
 	// SymbolicRef exits with code 1 when the ref is missing — fall through.
 	// Other exit codes (e.g. 128 for fatal git errors) indicate a real
 	// problem, so propagate them instead of silently using a fallback.
-	var exitErr *osexec.ExitError
-	if errors.As(err, &exitErr) && exitErr.ExitCode() != 1 {
+	if hashiexec.IsExitError(err) && !hashiexec.IsExitCode(err, 1) {
 		return "", fmt.Errorf("resolving default branch: %w", err)
 	}
 
@@ -102,6 +100,9 @@ func (r *Resolver) resolveSessionName(repoRoot string) string {
 func sanitizeSessionName(s string) string {
 	s = strings.ReplaceAll(s, ":", "-")
 	s = strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f {
+			return '-'
+		}
 		if r == ' ' || r == '\t' {
 			return '-'
 		}

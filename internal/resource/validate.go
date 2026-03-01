@@ -1,7 +1,7 @@
 package resource
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 )
 
@@ -32,7 +32,7 @@ var branchRules = []branchRule{
 func ValidateBranchName(name string) error {
 	for _, r := range branchRules {
 		if r.check(name) {
-			return fmt.Errorf("%s", r.message)
+			return errors.New(r.message)
 		}
 	}
 	return nil

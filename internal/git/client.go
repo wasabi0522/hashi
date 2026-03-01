@@ -38,7 +38,8 @@ func (c *client) ListBranches() ([]string, error) {
 	if out == "" {
 		return nil, nil
 	}
-	var branches []string
+	lines := strings.Split(out, "\n")
+	branches := make([]string, 0, len(lines))
 	for line := range strings.SplitSeq(out, "\n") {
 		branches = append(branches, line)
 	}
@@ -114,8 +115,8 @@ func parseWorktreeList(output string) []Worktree {
 		return nil
 	}
 
-	var worktrees []Worktree
 	blocks := strings.Split(output, "\n\n")
+	worktrees := make([]Worktree, 0, len(blocks))
 
 	for i, block := range blocks {
 		block = strings.TrimSpace(block)

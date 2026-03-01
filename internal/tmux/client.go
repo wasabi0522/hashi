@@ -100,7 +100,8 @@ func parseWindowList(output string) []Window {
 		return nil
 	}
 
-	var windows []Window
+	lines := strings.Split(output, "\n")
+	windows := make([]Window, 0, len(lines))
 	for line := range strings.SplitSeq(output, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {

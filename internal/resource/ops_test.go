@@ -94,7 +94,7 @@ func TestEnsureWorktree(t *testing.T) {
 func TestEnsureTmux(t *testing.T) {
 	t.Run("creates session when none exists", func(t *testing.T) {
 		var sessionName, windowName, dir, capturedInitCmd string
-		svc := NewService(nil, nil, &tmux.ClientMock{
+		svc := NewService(nil, &tmux.ClientMock{
 			HasSessionFunc: func(name string) (bool, error) {
 				return false, nil
 			},
@@ -116,7 +116,7 @@ func TestEnsureTmux(t *testing.T) {
 	})
 
 	t.Run("returns error when HasSession fails", func(t *testing.T) {
-		svc := NewService(nil, nil, &tmux.ClientMock{
+		svc := NewService(nil, &tmux.ClientMock{
 			HasSessionFunc: func(name string) (bool, error) {
 				return false, fmt.Errorf("tmux not running")
 			},
@@ -129,7 +129,7 @@ func TestEnsureTmux(t *testing.T) {
 
 	t.Run("creates window when session exists but window does not", func(t *testing.T) {
 		var newWindowName, capturedInitCmd string
-		svc := NewService(nil, nil, &tmux.ClientMock{
+		svc := NewService(nil, &tmux.ClientMock{
 			HasSessionFunc: func(name string) (bool, error) {
 				return true, nil
 			},
@@ -151,7 +151,7 @@ func TestEnsureTmux(t *testing.T) {
 
 	t.Run("sends cd when window exists and pane runs shell", func(t *testing.T) {
 		var allKeys [][]string
-		svc := NewService(nil, nil, &tmux.ClientMock{
+		svc := NewService(nil, &tmux.ClientMock{
 			HasSessionFunc: func(name string) (bool, error) {
 				return true, nil
 			},
@@ -177,7 +177,7 @@ func TestEnsureTmux(t *testing.T) {
 
 	t.Run("skips cd when pane runs non-shell process", func(t *testing.T) {
 		var sendKeysCalled bool
-		svc := NewService(nil, nil, &tmux.ClientMock{
+		svc := NewService(nil, &tmux.ClientMock{
 			HasSessionFunc: func(name string) (bool, error) {
 				return true, nil
 			},
@@ -200,7 +200,7 @@ func TestEnsureTmux(t *testing.T) {
 
 	t.Run("skips cd when PaneCurrentCommand errors", func(t *testing.T) {
 		var sendKeysCalled bool
-		svc := NewService(nil, nil, &tmux.ClientMock{
+		svc := NewService(nil, &tmux.ClientMock{
 			HasSessionFunc: func(name string) (bool, error) {
 				return true, nil
 			},
@@ -222,7 +222,7 @@ func TestEnsureTmux(t *testing.T) {
 	})
 
 	t.Run("error from ListWindows", func(t *testing.T) {
-		svc := NewService(nil, nil, &tmux.ClientMock{
+		svc := NewService(nil, &tmux.ClientMock{
 			HasSessionFunc: func(name string) (bool, error) {
 				return true, nil
 			},
@@ -237,7 +237,7 @@ func TestEnsureTmux(t *testing.T) {
 }
 
 func TestIsShellCommand(t *testing.T) {
-	svc := NewService(nil, nil, nil)
+	svc := NewService(nil, nil)
 	shells := []string{"bash", "zsh", "fish", "sh", "dash", "ksh", "tcsh", "csh"}
 	for _, s := range shells {
 		assert.True(t, svc.isShellCommand(s), "should be shell: %s", s)
@@ -251,7 +251,7 @@ func TestIsShellCommand(t *testing.T) {
 func TestConnect(t *testing.T) {
 	t.Run("switch client when inside tmux", func(t *testing.T) {
 		var switched bool
-		svc := NewService(nil, nil, &tmux.ClientMock{
+		svc := NewService(nil, &tmux.ClientMock{
 			IsInsideTmuxFunc: func() bool { return true },
 			SwitchClientFunc: func(session string, window string) error {
 				switched = true
@@ -266,7 +266,7 @@ func TestConnect(t *testing.T) {
 
 	t.Run("attach session when outside tmux", func(t *testing.T) {
 		var attached bool
-		svc := NewService(nil, nil, &tmux.ClientMock{
+		svc := NewService(nil, &tmux.ClientMock{
 			IsInsideTmuxFunc: func() bool { return false },
 			AttachSessionFunc: func(session string, window string) error {
 				attached = true
@@ -281,52 +281,57 @@ func TestConnect(t *testing.T) {
 }
 
 func TestBuildInitCmd(t *testing.T) {
-	t.Run("builds for loop with sh -c and appends exec shell", func(t *testing.T) {
-		svc := NewService(nil, nil, nil, WithCommonParams(CommonParams{
+	t.Run("chains hooks with && and appends exec shell", func(t *testing.T) {
+		svc := NewService(nil, nil, WithCommonParams(CommonParams{
+			Shell:        "/bin/zsh",
 			PostNewHooks: []string{"npm install", "echo done"},
 		}))
-		cmd := svc.buildInitCmd(true, "/bin/zsh")
-		assert.Equal(t, "for __cmd in 'npm install' 'echo done'; do sh -c \"$__cmd\" || exit 1; done; exec '/bin/zsh'", cmd)
+		cmd := svc.buildInitCmd(true)
+		assert.Equal(t, "sh -c 'npm install' && sh -c 'echo done'; exec '/bin/zsh'", cmd)
 	})
 
 	t.Run("single hook", func(t *testing.T) {
-		svc := NewService(nil, nil, nil, WithCommonParams(CommonParams{
+		svc := NewService(nil, nil, WithCommonParams(CommonParams{
+			Shell:        "/bin/bash",
 			PostNewHooks: []string{"npm install"},
 		}))
-		cmd := svc.buildInitCmd(true, "/bin/bash")
-		assert.Equal(t, "for __cmd in 'npm install'; do sh -c \"$__cmd\" || exit 1; done; exec '/bin/bash'", cmd)
+		cmd := svc.buildInitCmd(true)
+		assert.Equal(t, "sh -c 'npm install'; exec '/bin/bash'", cmd)
 	})
 
 	t.Run("empty hooks returns empty string", func(t *testing.T) {
-		svc := NewService(nil, nil, nil, WithCommonParams(CommonParams{
+		svc := NewService(nil, nil, WithCommonParams(CommonParams{
+			Shell:        "/bin/zsh",
 			PostNewHooks: nil,
 		}))
-		cmd := svc.buildInitCmd(true, "/bin/zsh")
+		cmd := svc.buildInitCmd(true)
 		assert.Empty(t, cmd)
 	})
 
 	t.Run("not created returns empty string", func(t *testing.T) {
-		svc := NewService(nil, nil, nil, WithCommonParams(CommonParams{
+		svc := NewService(nil, nil, WithCommonParams(CommonParams{
+			Shell:        "/bin/zsh",
 			PostNewHooks: []string{"echo hello"},
 		}))
-		cmd := svc.buildInitCmd(false, "/bin/zsh")
+		cmd := svc.buildInitCmd(false)
 		assert.Empty(t, cmd)
 	})
 
 	t.Run("falls back to sh when shell is empty", func(t *testing.T) {
-		svc := NewService(nil, nil, nil, WithCommonParams(CommonParams{
+		svc := NewService(nil, nil, WithCommonParams(CommonParams{
 			PostNewHooks: []string{"echo hello"},
 		}))
-		cmd := svc.buildInitCmd(true, "")
-		assert.Equal(t, "for __cmd in 'echo hello'; do sh -c \"$__cmd\" || exit 1; done; exec 'sh'", cmd)
+		cmd := svc.buildInitCmd(true)
+		assert.Equal(t, "sh -c 'echo hello'; exec 'sh'", cmd)
 	})
 
 	t.Run("escapes single quotes in hooks", func(t *testing.T) {
-		svc := NewService(nil, nil, nil, WithCommonParams(CommonParams{
+		svc := NewService(nil, nil, WithCommonParams(CommonParams{
+			Shell:        "/bin/zsh",
 			PostNewHooks: []string{"echo 'hello'"},
 		}))
-		cmd := svc.buildInitCmd(true, "/bin/zsh")
-		assert.Equal(t, "for __cmd in 'echo '\\''hello'\\'''; do sh -c \"$__cmd\" || exit 1; done; exec '/bin/zsh'", cmd)
+		cmd := svc.buildInitCmd(true)
+		assert.Equal(t, "sh -c 'echo '\\''hello'\\'''; exec '/bin/zsh'", cmd)
 	})
 }
 
@@ -337,7 +342,7 @@ func TestCopyFiles(t *testing.T) {
 		require.NoError(t, os.MkdirAll(wtPath, 0755))
 		require.NoError(t, os.WriteFile(filepath.Join(repoRoot, ".env"), []byte("SECRET=1"), 0644))
 
-		svc := NewService(nil, nil, nil, WithCommonParams(CommonParams{
+		svc := NewService(nil, nil, WithCommonParams(CommonParams{
 			RepoRoot:  repoRoot,
 			CopyFiles: []string{".env"},
 		}))
@@ -360,7 +365,7 @@ func TestCopyFiles(t *testing.T) {
 		require.NoError(t, os.MkdirAll(claudeDir, 0755))
 		require.NoError(t, os.WriteFile(filepath.Join(claudeDir, "settings.json"), []byte(`{"key":"val"}`), 0644))
 
-		svc := NewService(nil, nil, nil, WithCommonParams(CommonParams{
+		svc := NewService(nil, nil, WithCommonParams(CommonParams{
 			RepoRoot:  repoRoot,
 			CopyFiles: []string{".claude"},
 		}))
@@ -378,7 +383,7 @@ func TestCopyFiles(t *testing.T) {
 		wtPath := filepath.Join(repoRoot, ".worktrees", "feat")
 		require.NoError(t, os.MkdirAll(wtPath, 0755))
 
-		svc := NewService(nil, nil, nil, WithCommonParams(CommonParams{
+		svc := NewService(nil, nil, WithCommonParams(CommonParams{
 			RepoRoot:  repoRoot,
 			CopyFiles: []string{".env", "nonexistent.txt"},
 		}))
@@ -388,7 +393,7 @@ func TestCopyFiles(t *testing.T) {
 	})
 
 	t.Run("empty list does nothing", func(t *testing.T) {
-		svc := NewService(nil, nil, nil, WithCommonParams(CommonParams{
+		svc := NewService(nil, nil, WithCommonParams(CommonParams{
 			RepoRoot:  t.TempDir(),
 			CopyFiles: nil,
 		}))
@@ -397,13 +402,28 @@ func TestCopyFiles(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("rejects path traversal", func(t *testing.T) {
+		repoRoot := t.TempDir()
+		wtPath := filepath.Join(repoRoot, ".worktrees", "feat")
+		require.NoError(t, os.MkdirAll(wtPath, 0755))
+
+		svc := NewService(nil, nil, WithCommonParams(CommonParams{
+			RepoRoot:  repoRoot,
+			CopyFiles: []string{"../../../etc/passwd"},
+		}))
+
+		err := svc.copyFiles(wtPath)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "escapes repository root")
+	})
+
 	t.Run("preserves file permissions", func(t *testing.T) {
 		repoRoot := t.TempDir()
 		wtPath := filepath.Join(repoRoot, ".worktrees", "feat")
 		require.NoError(t, os.MkdirAll(wtPath, 0755))
 		require.NoError(t, os.WriteFile(filepath.Join(repoRoot, "script.sh"), []byte("#!/bin/sh"), 0755))
 
-		svc := NewService(nil, nil, nil, WithCommonParams(CommonParams{
+		svc := NewService(nil, nil, WithCommonParams(CommonParams{
 			RepoRoot:  repoRoot,
 			CopyFiles: []string{"script.sh"},
 		}))
@@ -434,13 +454,13 @@ func (l *testLogger) Warn(msg string, args ...any) {
 func TestBestEffort(t *testing.T) {
 	t.Run("nil error does nothing", func(t *testing.T) {
 		log := &testLogger{}
-		svc := NewService(nil, nil, nil, WithLogger(log))
+		svc := NewService(nil, nil, WithLogger(log))
 		svc.bestEffort("op", nil)
 		assert.Empty(t, log.warnings)
 	})
 
 	t.Run("nil logger does not panic", func(t *testing.T) {
-		svc := NewService(nil, nil, nil)
+		svc := NewService(nil, nil)
 		assert.NotPanics(t, func() {
 			svc.bestEffort("op", fmt.Errorf("fail"))
 		})
@@ -448,7 +468,7 @@ func TestBestEffort(t *testing.T) {
 
 	t.Run("logs warning on error", func(t *testing.T) {
 		log := &testLogger{}
-		svc := NewService(nil, nil, nil, WithLogger(log))
+		svc := NewService(nil, nil, WithLogger(log))
 		svc.bestEffort("TestOp", fmt.Errorf("something failed"))
 		require.Len(t, log.warnings, 1)
 		assert.Contains(t, log.warnings[0], "TestOp")

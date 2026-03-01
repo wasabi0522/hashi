@@ -24,11 +24,16 @@ func (s *Service) Rename(ctx context.Context, p RenameParams) (*OperationResult,
 	if err := s.requireNotDefaultBranch(p.Old, "rename"); err != nil {
 		return nil, err
 	}
-	if err := s.requireBranchExists(p.Old); err != nil {
-		return nil, err
+	branches, err := s.git.ListBranches()
+	if err != nil {
+		return nil, fmt.Errorf("listing branches: %w", err)
 	}
-	if err := s.requireBranchNotExists(p.New); err != nil {
-		return nil, err
+	branchSet := toSet(branches)
+	if _, ok := branchSet[p.Old]; !ok {
+		return nil, &BranchNotFoundError{Branch: p.Old}
+	}
+	if _, ok := branchSet[p.New]; ok {
+		return nil, &BranchExistsError{Branch: p.New}
 	}
 
 	// Rename branch
@@ -53,7 +58,7 @@ func (s *Service) Rename(ctx context.Context, p RenameParams) (*OperationResult,
 	}
 
 	// Handle tmux
-	initCmd := s.buildInitCmd(wtCreated, os.Getenv("SHELL"))
+	initCmd := s.buildInitCmd(wtCreated)
 	s.renameTmuxWindow(p, wtPath, initCmd)
 
 	// Best-effort connect to the renamed window (aligns with New/Switch behavior)

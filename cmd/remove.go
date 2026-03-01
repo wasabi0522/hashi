@@ -59,44 +59,37 @@ func (a *App) runRemove(cmd *cobra.Command, args []string, force bool) error {
 	return nil
 }
 
-func removeWarnings(check resource.RemoveCheck) []string {
-	var w []string
-	if check.HasUncommitted {
-		w = append(w, "has uncommitted changes")
-	}
-	if check.IsUnmerged {
-		w = append(w, "has unmerged commits")
-	}
-	return w
-}
-
-func resourceList(check resource.RemoveCheck) string {
-	var res []string
-	if check.HasBranch {
-		res = append(res, "branch")
-	}
-	if check.HasWorktree {
-		res = append(res, "worktree")
-	}
-	if check.HasWindow {
-		res = append(res, "window")
-	}
-	return strings.Join(res, ", ")
-}
-
 // buildRemovePrompt builds a confirmation message for removal.
 // Precondition: check.HasResources() is true.
 func buildRemovePrompt(check resource.RemoveCheck) string {
-	resources := resourceList(check)
-	prompt := fmt.Sprintf("Remove '%s'? (%s)", check.Branch, resources)
+	var b strings.Builder
 
-	if !check.NeedsWarning() {
-		return prompt
+	fmt.Fprintf(&b, "Remove '%s'? (", check.Branch)
+	sep := ""
+	for _, r := range []struct {
+		has  bool
+		name string
+	}{
+		{check.HasBranch, "branch"},
+		{check.HasWorktree, "worktree"},
+		{check.HasWindow, "window"},
+	} {
+		if r.has {
+			b.WriteString(sep)
+			b.WriteString(r.name)
+			sep = ", "
+		}
 	}
-	for _, w := range removeWarnings(check) {
-		prompt += fmt.Sprintf("\n  %s %s", ui.Yellow("⚠"), w)
+	b.WriteByte(')')
+
+	if check.HasUncommitted {
+		fmt.Fprintf(&b, "\n  %s has uncommitted changes", ui.Yellow("⚠"))
 	}
-	return prompt
+	if check.IsUnmerged {
+		fmt.Fprintf(&b, "\n  %s has unmerged commits", ui.Yellow("⚠"))
+	}
+
+	return b.String()
 }
 
 func confirmPrompt(cmd *cobra.Command, message string) bool {

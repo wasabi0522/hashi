@@ -46,7 +46,7 @@ func (s *Service) CollectState(ctx context.Context) ([]State, error) {
 	winMap := toMap(windows, func(w tmux.Window) string { return w.Name })
 
 	seen := make(map[string]struct{})
-	var states []State
+	states := make([]State, 0, len(worktrees))
 
 	// Process worktrees
 	for _, wt := range worktrees {
