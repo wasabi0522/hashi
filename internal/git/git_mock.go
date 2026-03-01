@@ -26,6 +26,9 @@ var _ Client = &ClientMock{}
 //			BranchExistsFunc: func(name string) (bool, error) {
 //				panic("mock out the BranchExists method")
 //			},
+//			CurrentBranchFunc: func(dir string) (string, error) {
+//				panic("mock out the CurrentBranch method")
+//			},
 //			DeleteBranchFunc: func(name string) error {
 //				panic("mock out the DeleteBranch method")
 //			},
@@ -59,6 +62,9 @@ var _ Client = &ClientMock{}
 //			RepairWorktreesFunc: func() error {
 //				panic("mock out the RepairWorktrees method")
 //			},
+//			SwitchBranchFunc: func(dir string, branch string) error {
+//				panic("mock out the SwitchBranch method")
+//			},
 //			SymbolicRefFunc: func(ref string) (string, error) {
 //				panic("mock out the SymbolicRef method")
 //			},
@@ -77,6 +83,9 @@ type ClientMock struct {
 
 	// BranchExistsFunc mocks the BranchExists method.
 	BranchExistsFunc func(name string) (bool, error)
+
+	// CurrentBranchFunc mocks the CurrentBranch method.
+	CurrentBranchFunc func(dir string) (string, error)
 
 	// DeleteBranchFunc mocks the DeleteBranch method.
 	DeleteBranchFunc func(name string) error
@@ -111,6 +120,9 @@ type ClientMock struct {
 	// RepairWorktreesFunc mocks the RepairWorktrees method.
 	RepairWorktreesFunc func() error
 
+	// SwitchBranchFunc mocks the SwitchBranch method.
+	SwitchBranchFunc func(dir string, branch string) error
+
 	// SymbolicRefFunc mocks the SymbolicRef method.
 	SymbolicRefFunc func(ref string) (string, error)
 
@@ -136,6 +148,11 @@ type ClientMock struct {
 		BranchExists []struct {
 			// Name is the name argument value.
 			Name string
+		}
+		// CurrentBranch holds details about calls to the CurrentBranch method.
+		CurrentBranch []struct {
+			// Dir is the dir argument value.
+			Dir string
 		}
 		// DeleteBranch holds details about calls to the DeleteBranch method.
 		DeleteBranch []struct {
@@ -190,6 +207,13 @@ type ClientMock struct {
 		// RepairWorktrees holds details about calls to the RepairWorktrees method.
 		RepairWorktrees []struct {
 		}
+		// SwitchBranch holds details about calls to the SwitchBranch method.
+		SwitchBranch []struct {
+			// Dir is the dir argument value.
+			Dir string
+			// Branch is the branch argument value.
+			Branch string
+		}
 		// SymbolicRef holds details about calls to the SymbolicRef method.
 		SymbolicRef []struct {
 			// Ref is the ref argument value.
@@ -199,6 +223,7 @@ type ClientMock struct {
 	lockAddWorktree           sync.RWMutex
 	lockAddWorktreeNewBranch  sync.RWMutex
 	lockBranchExists          sync.RWMutex
+	lockCurrentBranch         sync.RWMutex
 	lockDeleteBranch          sync.RWMutex
 	lockDeleteBranchFrom      sync.RWMutex
 	lockGitCommonDir          sync.RWMutex
@@ -210,6 +235,7 @@ type ClientMock struct {
 	lockRemoveWorktree        sync.RWMutex
 	lockRenameBranch          sync.RWMutex
 	lockRepairWorktrees       sync.RWMutex
+	lockSwitchBranch          sync.RWMutex
 	lockSymbolicRef           sync.RWMutex
 }
 
@@ -318,6 +344,38 @@ func (mock *ClientMock) BranchExistsCalls() []struct {
 	mock.lockBranchExists.RLock()
 	calls = mock.calls.BranchExists
 	mock.lockBranchExists.RUnlock()
+	return calls
+}
+
+// CurrentBranch calls CurrentBranchFunc.
+func (mock *ClientMock) CurrentBranch(dir string) (string, error) {
+	if mock.CurrentBranchFunc == nil {
+		panic("ClientMock.CurrentBranchFunc: method is nil but Client.CurrentBranch was just called")
+	}
+	callInfo := struct {
+		Dir string
+	}{
+		Dir: dir,
+	}
+	mock.lockCurrentBranch.Lock()
+	mock.calls.CurrentBranch = append(mock.calls.CurrentBranch, callInfo)
+	mock.lockCurrentBranch.Unlock()
+	return mock.CurrentBranchFunc(dir)
+}
+
+// CurrentBranchCalls gets all the calls that were made to CurrentBranch.
+// Check the length with:
+//
+//	len(mockedClient.CurrentBranchCalls())
+func (mock *ClientMock) CurrentBranchCalls() []struct {
+	Dir string
+} {
+	var calls []struct {
+		Dir string
+	}
+	mock.lockCurrentBranch.RLock()
+	calls = mock.calls.CurrentBranch
+	mock.lockCurrentBranch.RUnlock()
 	return calls
 }
 
@@ -662,6 +720,42 @@ func (mock *ClientMock) RepairWorktreesCalls() []struct {
 	mock.lockRepairWorktrees.RLock()
 	calls = mock.calls.RepairWorktrees
 	mock.lockRepairWorktrees.RUnlock()
+	return calls
+}
+
+// SwitchBranch calls SwitchBranchFunc.
+func (mock *ClientMock) SwitchBranch(dir string, branch string) error {
+	if mock.SwitchBranchFunc == nil {
+		panic("ClientMock.SwitchBranchFunc: method is nil but Client.SwitchBranch was just called")
+	}
+	callInfo := struct {
+		Dir    string
+		Branch string
+	}{
+		Dir:    dir,
+		Branch: branch,
+	}
+	mock.lockSwitchBranch.Lock()
+	mock.calls.SwitchBranch = append(mock.calls.SwitchBranch, callInfo)
+	mock.lockSwitchBranch.Unlock()
+	return mock.SwitchBranchFunc(dir, branch)
+}
+
+// SwitchBranchCalls gets all the calls that were made to SwitchBranch.
+// Check the length with:
+//
+//	len(mockedClient.SwitchBranchCalls())
+func (mock *ClientMock) SwitchBranchCalls() []struct {
+	Dir    string
+	Branch string
+} {
+	var calls []struct {
+		Dir    string
+		Branch string
+	}
+	mock.lockSwitchBranch.RLock()
+	calls = mock.calls.SwitchBranch
+	mock.lockSwitchBranch.RUnlock()
 	return calls
 }
 

@@ -45,6 +45,14 @@ func (c *client) ListBranches() ([]string, error) {
 	return branches, nil
 }
 
+func (c *client) CurrentBranch(dir string) (string, error) {
+	return c.exec.Output("git", "-C", dir, "rev-parse", "--abbrev-ref", "HEAD")
+}
+
+func (c *client) SwitchBranch(dir, branch string) error {
+	return c.exec.Run("git", "-C", dir, "switch", branch)
+}
+
 func (c *client) BranchExists(name string) (bool, error) {
 	out, err := c.exec.Output("git", "branch", "--list", "--", name)
 	if err != nil {

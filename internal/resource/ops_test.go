@@ -15,7 +15,9 @@ import (
 func TestEnsureWorktree(t *testing.T) {
 	t.Run("default branch returns repo root", func(t *testing.T) {
 		cp := CommonParams{RepoRoot: "/repo", WorktreeDir: ".worktrees", DefaultBranch: "main"}
-		svc := newTestSvc(&git.ClientMock{}, stubTmux(), WithCommonParams(cp))
+		svc := newTestSvc(&git.ClientMock{
+			CurrentBranchFunc: func(dir string) (string, error) { return "main", nil },
+		}, stubTmux(), WithCommonParams(cp))
 
 		path, created, err := svc.ensureWorktree("main")
 		require.NoError(t, err)

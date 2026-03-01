@@ -54,11 +54,42 @@ func (s *Service) requireBranchNotExists(branch string) error {
 
 // ensureWorktree ensures a worktree exists for the given branch.
 // Returns (path, wasCreated, error).
+// For the default branch, verifies the repo root has the correct branch checked out,
+// switching automatically if clean, or returning an error if uncommitted changes exist.
 func (s *Service) ensureWorktree(branch string) (string, bool, error) {
 	if branch == s.cp.DefaultBranch {
+		if err := s.ensureDefaultBranchCheckout(); err != nil {
+			return "", false, err
+		}
 		return s.cp.RepoRoot, false, nil
 	}
 	return s.findOrCreateWorktree(branch)
+}
+
+// ensureDefaultBranchCheckout verifies that the repo root has the default branch checked out.
+// If a different branch is checked out and the working tree is clean, it switches automatically.
+// If uncommitted changes exist, it returns a RepoRootBranchMismatchError.
+func (s *Service) ensureDefaultBranchCheckout() error {
+	current, err := s.git.CurrentBranch(s.cp.RepoRoot)
+	if err != nil {
+		return fmt.Errorf("checking current branch at repo root: %w", err)
+	}
+	if current == s.cp.DefaultBranch {
+		return nil
+	}
+
+	dirty, err := s.git.HasUncommittedChanges(s.cp.RepoRoot)
+	if err != nil {
+		return fmt.Errorf("checking uncommitted changes at repo root: %w", err)
+	}
+	if dirty {
+		return &RepoRootBranchMismatchError{Expected: s.cp.DefaultBranch, Actual: current}
+	}
+
+	if err := s.git.SwitchBranch(s.cp.RepoRoot, s.cp.DefaultBranch); err != nil {
+		return fmt.Errorf("switching repo root to %s: %w", s.cp.DefaultBranch, err)
+	}
+	return nil
 }
 
 // findOrCreateWorktree returns the existing worktree for branch, or creates one.

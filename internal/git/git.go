@@ -12,6 +12,7 @@ type Querier interface {
 // BranchReader abstracts read-only branch operations.
 type BranchReader interface {
 	BranchExists(name string) (bool, error)
+	CurrentBranch(dir string) (string, error)
 	ListBranches() ([]string, error)
 	IsMerged(branch, base string) (bool, error)
 	HasUncommittedChanges(worktreePath string) (bool, error)
@@ -22,6 +23,7 @@ type BranchWriter interface {
 	RenameBranch(old, new string) error
 	DeleteBranch(name string) error
 	DeleteBranchFrom(dir, name string) error
+	SwitchBranch(dir, branch string) error
 }
 
 // WorktreeManager abstracts worktree operations.
