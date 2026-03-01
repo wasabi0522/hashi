@@ -3,5 +3,5 @@
 [tagpr]
 vPrefix = true
 releaseBranch = main
-release = draft
+release = false
 versionFile = -
