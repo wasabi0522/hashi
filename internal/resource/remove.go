@@ -130,7 +130,9 @@ func (s *Service) ExecuteRemove(ctx context.Context, check RemoveCheck) (*Remove
 
 	// Best-effort: kill session if no windows remain.
 	if ok, _ := s.tmux.HasSession(s.cp.SessionName); ok {
-		if windows := s.listWindowsSafe(s.cp.SessionName); len(windows) == 0 {
+		windows, lErr := s.tmux.ListWindows(s.cp.SessionName)
+		s.bestEffort("ListWindows", lErr)
+		if len(windows) == 0 {
 			if err := s.tmux.KillSession(s.cp.SessionName); err == nil {
 				result.SessionKilled = true
 			}

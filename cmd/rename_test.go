@@ -24,11 +24,8 @@ func TestRunRename(t *testing.T) {
 		repoRoot := t.TempDir()
 		app := appWithDeps(&deps{
 			git: &git.ClientMock{
-				BranchExistsFunc: func(name string) (bool, error) {
-					if name == "old" {
-						return true, nil
-					}
-					return false, nil
+				ListBranchesFunc: func() ([]string, error) {
+					return []string{"old"}, nil
 				},
 				RenameBranchFunc: func(old string, newName string) error {
 					return nil
@@ -85,8 +82,8 @@ func TestRunRename(t *testing.T) {
 	t.Run("rename error", func(t *testing.T) {
 		app := appWithDeps(&deps{
 			git: &git.ClientMock{
-				BranchExistsFunc: func(name string) (bool, error) {
-					return true, nil // both exist
+				ListBranchesFunc: func() ([]string, error) {
+					return []string{"old", "existing"}, nil
 				},
 			},
 			tmux: &tmux.ClientMock{},

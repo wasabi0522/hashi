@@ -149,6 +149,10 @@ func TestSanitizeSessionName(t *testing.T) {
 		{"emoji", "🚀rocket", "🚀rocket"},
 		{"multiple leading dots", "...config", "config"},
 		{"single dot", ".", "hashi"},
+		{"control char NUL", "my\x00project", "my-project"},
+		{"control char BEL", "my\x07project", "my-project"},
+		{"control char DEL", "my\x7fproject", "my-project"},
+		{"newline", "my\nproject", "my-project"},
 		{"long name", strings.Repeat("a", 200), strings.Repeat("a", 200)},
 	}
 

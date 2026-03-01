@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	hashiexec "github.com/wasabi0522/hashi/internal/exec"
 	"github.com/wasabi0522/hashi/internal/git"
 	"github.com/wasabi0522/hashi/internal/tmux"
 )
@@ -33,9 +32,8 @@ func WithShellCommands(m map[string]struct{}) Option {
 	return func(s *Service) { s.shellCommands = m }
 }
 
-// Service provides resource operations backed by exec, git, and tmux clients.
+// Service provides resource operations backed by git and tmux clients.
 type Service struct {
-	exec          hashiexec.Executor
 	git           git.Client
 	tmux          tmux.Client
 	cp            CommonParams
@@ -49,9 +47,8 @@ type nopLogger struct{}
 func (nopLogger) Warn(string, ...any) {}
 
 // NewService creates a Service with defaults for shell commands.
-func NewService(exec hashiexec.Executor, g git.Client, tm tmux.Client, opts ...Option) *Service {
+func NewService(g git.Client, tm tmux.Client, opts ...Option) *Service {
 	s := &Service{
-		exec:          exec,
 		git:           g,
 		tmux:          tm,
 		shellCommands: DefaultShellCommands,
@@ -69,6 +66,7 @@ type CommonParams struct {
 	WorktreeDir   string
 	DefaultBranch string
 	SessionName   string
+	Shell         string
 	CopyFiles     []string
 	PostNewHooks  []string
 }
@@ -118,7 +116,7 @@ func (s Status) String() string { return s.meta().name }
 
 // MarshalJSON returns the JSON encoding of the Status.
 func (s Status) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + s.String() + `"`), nil
+	return fmt.Appendf(nil, "%q", s.String()), nil
 }
 
 // UnmarshalJSON parses a JSON string into a Status.
@@ -168,6 +166,7 @@ func (o OperationType) String() string {
 }
 
 // OperationResult holds the outcome of a New, Switch, or Rename operation.
+// Currently used internally; will be surfaced in CLI output (e.g. --json flag).
 type OperationResult struct {
 	Operation    OperationType
 	Branch       string

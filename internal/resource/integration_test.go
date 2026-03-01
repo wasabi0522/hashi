@@ -43,7 +43,7 @@ func newTestService(t *testing.T, cp resource.CommonParams) (*resource.Service, 
 	t.Helper()
 	e := hashiexec.NewDefaultExecutor()
 	g := git.NewClient(e)
-	return resource.NewService(e, g, tmux.NewClient(e), resource.WithCommonParams(cp)), g
+	return resource.NewService(g, tmux.NewClient(e), resource.WithCommonParams(cp)), g
 }
 
 // logNonConnectError logs an error from New/Switch/Rename if it is not the

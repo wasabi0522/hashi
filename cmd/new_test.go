@@ -24,11 +24,8 @@ func TestRunNew(t *testing.T) {
 		repoRoot := t.TempDir()
 		app := appWithDeps(&deps{
 			git: &git.ClientMock{
-				BranchExistsFunc: func(name string) (bool, error) {
-					if name == "feature" {
-						return false, nil
-					}
-					return true, nil
+				ListBranchesFunc: func() ([]string, error) {
+					return []string{"main"}, nil
 				},
 				AddWorktreeNewBranchFunc: func(path string, branch string, base string) error {
 					return nil
@@ -64,11 +61,8 @@ func TestRunNew(t *testing.T) {
 		var usedBase string
 		app := appWithDeps(&deps{
 			git: &git.ClientMock{
-				BranchExistsFunc: func(name string) (bool, error) {
-					if name == "feature" {
-						return false, nil
-					}
-					return true, nil
+				ListBranchesFunc: func() ([]string, error) {
+					return []string{"main", "develop"}, nil
 				},
 				AddWorktreeNewBranchFunc: func(path string, branch string, base string) error {
 					usedBase = base
@@ -125,8 +119,8 @@ func TestRunNew(t *testing.T) {
 	t.Run("resource.New error", func(t *testing.T) {
 		app := appWithDeps(&deps{
 			git: &git.ClientMock{
-				BranchExistsFunc: func(name string) (bool, error) {
-					return false, fmt.Errorf("git error")
+				ListBranchesFunc: func() ([]string, error) {
+					return nil, fmt.Errorf("git error")
 				},
 			},
 			tmux: &tmux.ClientMock{},

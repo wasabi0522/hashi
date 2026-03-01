@@ -101,7 +101,6 @@ func TestSwitch(t *testing.T) {
 
 	t.Run("passes initCmd to tmux when worktree created", func(t *testing.T) {
 		repoRoot := t.TempDir()
-		t.Setenv("SHELL", "/bin/bash")
 		g := &git.ClientMock{
 			BranchExistsFunc: mockBranchExists("feature"),
 			ListWorktreesFunc: func() ([]git.Worktree, error) {
@@ -123,8 +122,8 @@ func TestSwitch(t *testing.T) {
 			SwitchClientFunc: func(session string, window string) error { return nil },
 		}
 
-		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo", PostNewHooks: []string{"echo hello"}}
-		svc := NewService(nil, g, tm, WithCommonParams(cp))
+		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo", Shell: "/bin/bash", PostNewHooks: []string{"echo hello"}}
+		svc := NewService(g, tm, WithCommonParams(cp))
 		_, err := svc.Switch(context.Background(), SwitchParams{
 			Branch: "feature",
 		})

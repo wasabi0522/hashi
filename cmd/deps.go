@@ -30,7 +30,6 @@ func NewApp() *App {
 }
 
 type deps struct {
-	exec hashiexec.Executor
 	git  git.Client
 	tmux tmux.Client
 	ctx  *hashicontext.Context
@@ -74,7 +73,7 @@ func doResolveDeps(opts resolveOpts) (*deps, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &deps{exec: opts.exec, git: g, tmux: tm, ctx: ctx, cfg: cfg}, nil
+	return &deps{git: g, tmux: tm, ctx: ctx, cfg: cfg}, nil
 }
 
 // withService resolves dependencies (requiring tmux) and calls fn with the constructed Service.
@@ -93,6 +92,16 @@ func (a *App) serviceOpts() []resource.Option {
 	return nil
 }
 
+// resolveShell returns the user's login shell from $SHELL.
+// Falls back to "sh" if $SHELL is unset or not an absolute path.
+func resolveShell() string {
+	shell := os.Getenv("SHELL")
+	if shell != "" && filepath.IsAbs(shell) {
+		return shell
+	}
+	return "sh"
+}
+
 func (d *deps) service(opts ...resource.Option) *resource.Service {
 	allOpts := []resource.Option{
 		resource.WithCommonParams(resource.CommonParams{
@@ -100,12 +109,13 @@ func (d *deps) service(opts ...resource.Option) *resource.Service {
 			WorktreeDir:   d.cfg.WorktreeDir,
 			DefaultBranch: d.ctx.DefaultBranch,
 			SessionName:   d.ctx.SessionName,
+			Shell:         resolveShell(),
 			CopyFiles:     d.cfg.Hooks.CopyFiles,
 			PostNewHooks:  d.cfg.Hooks.PostNew,
 		}),
 	}
 	allOpts = append(allOpts, opts...)
-	return resource.NewService(d.exec, d.git, d.tmux, allOpts...)
+	return resource.NewService(d.git, d.tmux, allOpts...)
 }
 
 type gitDeps struct {

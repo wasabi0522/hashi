@@ -3,7 +3,6 @@ package resource
 import (
 	"context"
 	"fmt"
-	"os"
 )
 
 // SwitchParams holds parameters for the Switch operation.
@@ -33,7 +32,7 @@ func (s *Service) Switch(ctx context.Context, p SwitchParams) (*OperationResult,
 		}
 	}
 
-	initCmd := s.buildInitCmd(wtCreated, os.Getenv("SHELL"))
+	initCmd := s.buildInitCmd(wtCreated)
 	if err := s.ensureTmux(s.cp.SessionName, p.Branch, wtPath, initCmd); err != nil {
 		return nil, fmt.Errorf("ensuring tmux: %w", err)
 	}

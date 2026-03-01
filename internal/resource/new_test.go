@@ -17,7 +17,7 @@ func TestNew(t *testing.T) {
 		repoRoot := t.TempDir()
 		var addedWT, addedBranch, addedBase string
 		g := &git.ClientMock{
-			BranchExistsFunc: mockBranchExists("main"),
+			ListBranchesFunc: mockListBranches("main"),
 			AddWorktreeNewBranchFunc: func(path string, branch string, base string) error {
 				addedWT = path
 				addedBranch = branch
@@ -42,7 +42,7 @@ func TestNew(t *testing.T) {
 		repoRoot := t.TempDir()
 		var addedBase string
 		g := &git.ClientMock{
-			BranchExistsFunc: mockBranchExists("main", "develop"),
+			ListBranchesFunc: mockListBranches("main", "develop"),
 			AddWorktreeNewBranchFunc: func(path string, branch string, base string) error {
 				addedBase = base
 				return nil
@@ -62,7 +62,7 @@ func TestNew(t *testing.T) {
 
 	t.Run("errors when base specified for existing branch", func(t *testing.T) {
 		g := &git.ClientMock{
-			BranchExistsFunc: mockBranchExists("feature", "develop"),
+			ListBranchesFunc: mockListBranches("feature", "develop"),
 		}
 
 		cp := CommonParams{DefaultBranch: "main", SessionName: "org/repo"}
@@ -77,7 +77,7 @@ func TestNew(t *testing.T) {
 
 	t.Run("errors when base branch does not exist", func(t *testing.T) {
 		g := &git.ClientMock{
-			BranchExistsFunc: mockBranchExists(), // nothing exists
+			ListBranchesFunc: mockListBranches(), // nothing exists
 		}
 
 		cp := CommonParams{DefaultBranch: "main", SessionName: "org/repo"}
@@ -90,10 +90,10 @@ func TestNew(t *testing.T) {
 		assert.Contains(t, err.Error(), "does not exist")
 	})
 
-	t.Run("BranchExists error", func(t *testing.T) {
+	t.Run("ListBranches error", func(t *testing.T) {
 		g := &git.ClientMock{
-			BranchExistsFunc: func(name string) (bool, error) {
-				return false, fmt.Errorf("git error")
+			ListBranchesFunc: func() ([]string, error) {
+				return nil, fmt.Errorf("git error")
 			},
 		}
 
@@ -109,7 +109,7 @@ func TestNew(t *testing.T) {
 		repoRoot := t.TempDir()
 		var removedWT, deletedBranch string
 		g := &git.ClientMock{
-			BranchExistsFunc: mockBranchExists("main"),
+			ListBranchesFunc: mockListBranches("main"),
 			AddWorktreeNewBranchFunc: func(path string, branch string, base string) error {
 				return nil
 			},
@@ -143,7 +143,7 @@ func TestNew(t *testing.T) {
 
 	t.Run("existing branch ensures worktree and tmux", func(t *testing.T) {
 		g := &git.ClientMock{
-			BranchExistsFunc: mockBranchExists("feature", "main"),
+			ListBranchesFunc: mockListBranches("feature", "main"),
 			ListWorktreesFunc: func() ([]git.Worktree, error) {
 				return []git.Worktree{
 					{Path: "/repo/.worktrees/feature", Branch: "feature"},
@@ -179,7 +179,7 @@ func TestNew(t *testing.T) {
 		repoRoot := t.TempDir()
 		var removedWT bool
 		g := &git.ClientMock{
-			BranchExistsFunc: mockBranchExists("feature", "main"),
+			ListBranchesFunc: mockListBranches("feature", "main"),
 			ListWorktreesFunc: func() ([]git.Worktree, error) {
 				return nil, nil
 			},
@@ -211,9 +211,8 @@ func TestNew(t *testing.T) {
 
 	t.Run("passes initCmd to tmux when worktree created for new branch", func(t *testing.T) {
 		repoRoot := t.TempDir()
-		t.Setenv("SHELL", "/bin/zsh")
 		g := &git.ClientMock{
-			BranchExistsFunc: mockBranchExists("main"),
+			ListBranchesFunc: mockListBranches("main"),
 			AddWorktreeNewBranchFunc: func(path string, branch string, base string) error {
 				_ = os.MkdirAll(path, 0755)
 				return nil
@@ -230,8 +229,8 @@ func TestNew(t *testing.T) {
 			SwitchClientFunc: func(session string, window string) error { return nil },
 		}
 
-		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo", PostNewHooks: []string{"echo hello"}}
-		svc := NewService(nil, g, tm, WithCommonParams(cp))
+		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo", Shell: "/bin/zsh", PostNewHooks: []string{"echo hello"}}
+		svc := NewService(g, tm, WithCommonParams(cp))
 		_, err := svc.New(context.Background(), NewParams{
 			Branch: "feature",
 		})
@@ -245,7 +244,7 @@ func TestNew(t *testing.T) {
 	t.Run("AddWorktreeNewBranch error", func(t *testing.T) {
 		repoRoot := t.TempDir()
 		g := &git.ClientMock{
-			BranchExistsFunc: mockBranchExists("main"),
+			ListBranchesFunc: mockListBranches("main"),
 			AddWorktreeNewBranchFunc: func(path string, branch string, base string) error {
 				return fmt.Errorf("worktree add failed")
 			},

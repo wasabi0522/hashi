@@ -3,7 +3,6 @@ package resource
 import (
 	"context"
 	"fmt"
-	"os"
 )
 
 // NewParams holds parameters for the New operation.
@@ -23,10 +22,12 @@ func (s *Service) New(ctx context.Context, p NewParams) (*OperationResult, error
 		}
 	}
 
-	branchExists, err := s.git.BranchExists(p.Branch)
+	branches, err := s.git.ListBranches()
 	if err != nil {
-		return nil, fmt.Errorf("checking branch: %w", err)
+		return nil, fmt.Errorf("listing branches: %w", err)
 	}
+	branchSet := toSet(branches)
+	_, branchExists := branchSet[p.Branch]
 
 	if branchExists && p.Base != "" {
 		return nil, fmt.Errorf("cannot specify base branch for existing branch '%s'", p.Branch)
@@ -46,8 +47,8 @@ func (s *Service) New(ctx context.Context, p NewParams) (*OperationResult, error
 		if base == "" {
 			base = s.cp.DefaultBranch
 		}
-		if err := s.requireBranchExists(base); err != nil {
-			return nil, err
+		if _, ok := branchSet[base]; !ok {
+			return nil, &BranchNotFoundError{Branch: base}
 		}
 
 		wtPath = s.cp.WorktreePath(p.Branch)
@@ -67,7 +68,7 @@ func (s *Service) New(ctx context.Context, p NewParams) (*OperationResult, error
 	}
 
 	// Ensure tmux (best-effort rollback on failure)
-	initCmd := s.buildInitCmd(wtCreated, os.Getenv("SHELL"))
+	initCmd := s.buildInitCmd(wtCreated)
 	if err := s.ensureTmux(s.cp.SessionName, p.Branch, wtPath, initCmd); err != nil {
 		s.rollbackNew(wtCreated, branchCreated, wtPath, p.Branch)
 		return nil, err

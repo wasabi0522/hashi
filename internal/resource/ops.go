@@ -40,18 +40,6 @@ func (s *Service) requireBranchExists(branch string) error {
 	return nil
 }
 
-// requireBranchNotExists returns a BranchExistsError if the branch already exists.
-func (s *Service) requireBranchNotExists(branch string) error {
-	exists, err := s.git.BranchExists(branch)
-	if err != nil {
-		return fmt.Errorf("checking branch %q: %w", branch, err)
-	}
-	if exists {
-		return &BranchExistsError{Branch: branch}
-	}
-	return nil
-}
-
 // ensureWorktree ensures a worktree exists for the given branch.
 // Returns (path, wasCreated, error).
 func (s *Service) ensureWorktree(branch string) (string, bool, error) {
@@ -159,29 +147,33 @@ func (s *Service) finalizeOperation(op OperationType, branch, wtPath string, wtC
 }
 
 // buildInitCmd builds the tmux initial command string for post_new hooks.
-// Each hook runs in its own sh -c subshell with fail-fast behavior.
-// shell is the user's login shell (e.g. from $SHELL); falls back to "sh" if empty.
+// Each hook runs in its own sh -c subshell chained with && for fail-fast behavior.
+// The user's login shell is taken from CommonParams.Shell; falls back to "sh" if empty.
 // Returns "" if no hooks or worktree was not created.
-func (s *Service) buildInitCmd(wtCreated bool, shell string) string {
+func (s *Service) buildInitCmd(wtCreated bool) string {
 	if !wtCreated || len(s.cp.PostNewHooks) == 0 {
 		return ""
 	}
+	shell := s.cp.Shell
 	if shell == "" {
 		shell = "sh"
 	}
-	var quoted []string
+	parts := make([]string, 0, len(s.cp.PostNewHooks))
 	for _, h := range s.cp.PostNewHooks {
-		quoted = append(quoted, shellQuote(h))
+		parts = append(parts, fmt.Sprintf("sh -c %s", shellQuote(h)))
 	}
-	return fmt.Sprintf("for __cmd in %s; do sh -c \"$__cmd\" || exit 1; done; exec %s",
-		strings.Join(quoted, " "), shellQuote(shell))
+	return strings.Join(parts, " && ") + "; exec " + shellQuote(shell)
 }
 
 // copyFiles copies configured files and directories from repo root to the worktree.
 // Entries that do not exist in the repo root are silently skipped.
+// Paths containing ".." that escape the repo root are rejected.
 func (s *Service) copyFiles(wtPath string) error {
 	for _, rel := range s.cp.CopyFiles {
 		src := filepath.Join(s.cp.RepoRoot, rel)
+		if !strings.HasPrefix(filepath.Clean(src)+string(filepath.Separator), filepath.Clean(s.cp.RepoRoot)+string(filepath.Separator)) {
+			return fmt.Errorf("copy_files entry %q escapes repository root", rel)
+		}
 		dst := filepath.Join(wtPath, rel)
 
 		info, err := os.Lstat(src)

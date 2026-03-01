@@ -29,7 +29,7 @@ func TestRename(t *testing.T) {
 	t.Run("errors when old branch does not exist", func(t *testing.T) {
 		cp := CommonParams{DefaultBranch: "main"}
 		svc := newTestSvc(
-			&git.ClientMock{BranchExistsFunc: mockBranchExists()},
+			&git.ClientMock{ListBranchesFunc: mockListBranches()},
 			stubTmux(),
 			WithCommonParams(cp),
 		)
@@ -45,7 +45,7 @@ func TestRename(t *testing.T) {
 	t.Run("errors when new branch already exists", func(t *testing.T) {
 		cp := CommonParams{DefaultBranch: "main"}
 		svc := newTestSvc(
-			&git.ClientMock{BranchExistsFunc: mockBranchExists("old", "existing")},
+			&git.ClientMock{ListBranchesFunc: mockListBranches("old", "existing")},
 			stubTmux(),
 			WithCommonParams(cp),
 		)
@@ -58,36 +58,12 @@ func TestRename(t *testing.T) {
 		assert.Contains(t, err.Error(), "already exists")
 	})
 
-	t.Run("BranchExists error on old", func(t *testing.T) {
+	t.Run("ListBranches error", func(t *testing.T) {
 		cp := CommonParams{DefaultBranch: "main"}
 		svc := newTestSvc(
 			&git.ClientMock{
-				BranchExistsFunc: func(name string) (bool, error) {
-					return false, fmt.Errorf("git error")
-				},
-			},
-			stubTmux(),
-			WithCommonParams(cp),
-		)
-
-		_, err := svc.Rename(context.Background(), RenameParams{
-			Old: "old",
-			New: "new",
-		})
-		assert.Error(t, err)
-	})
-
-	t.Run("BranchExists error on new", func(t *testing.T) {
-		callCount := 0
-		cp := CommonParams{DefaultBranch: "main"}
-		svc := newTestSvc(
-			&git.ClientMock{
-				BranchExistsFunc: func(name string) (bool, error) {
-					callCount++
-					if callCount == 1 {
-						return true, nil // old exists
-					}
-					return false, fmt.Errorf("git error")
+				ListBranchesFunc: func() ([]string, error) {
+					return nil, fmt.Errorf("git error")
 				},
 			},
 			stubTmux(),
@@ -106,7 +82,7 @@ func TestRename(t *testing.T) {
 		var renamedOld, renamedNew string
 		var addedWT string
 		g := &git.ClientMock{
-			BranchExistsFunc: mockBranchExists("old"),
+			ListBranchesFunc: mockListBranches("old"),
 			RenameBranchFunc: func(old string, newName string) error {
 				renamedOld = old
 				renamedNew = newName
@@ -140,7 +116,7 @@ func TestRename(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(oldPath, "marker.txt"), []byte("x"), 0644))
 
 		g := &git.ClientMock{
-			BranchExistsFunc: mockBranchExists("old"),
+			ListBranchesFunc: mockListBranches("old"),
 			RenameBranchFunc: func(old string, newName string) error {
 				return nil
 			},
@@ -177,7 +153,7 @@ func TestRename(t *testing.T) {
 
 		var branchRolledBack bool
 		g := &git.ClientMock{
-			BranchExistsFunc: mockBranchExists("old"),
+			ListBranchesFunc: mockListBranches("old"),
 			RenameBranchFunc: func(old string, newName string) error {
 				if old == "new" && newName == "old" {
 					branchRolledBack = true
@@ -209,7 +185,7 @@ func TestRename(t *testing.T) {
 		repoRoot := t.TempDir()
 		var rolledBack bool
 		g := &git.ClientMock{
-			BranchExistsFunc: mockBranchExists("old"),
+			ListBranchesFunc: mockListBranches("old"),
 			RenameBranchFunc: func(old string, newName string) error {
 				if old == "new" && newName == "old" {
 					rolledBack = true
@@ -238,7 +214,7 @@ func TestRename(t *testing.T) {
 		repoRoot := t.TempDir()
 		var renamedWindow bool
 		g := &git.ClientMock{
-			BranchExistsFunc: mockBranchExists("old"),
+			ListBranchesFunc: mockListBranches("old"),
 			RenameBranchFunc: func(old string, newName string) error {
 				return nil
 			},
@@ -284,7 +260,7 @@ func TestRename(t *testing.T) {
 		repoRoot := t.TempDir()
 		var newWindowCreated bool
 		g := &git.ClientMock{
-			BranchExistsFunc: mockBranchExists("old"),
+			ListBranchesFunc: mockListBranches("old"),
 			RenameBranchFunc: func(old string, newName string) error {
 				return nil
 			},
@@ -324,7 +300,7 @@ func TestRename(t *testing.T) {
 		cp := CommonParams{DefaultBranch: "main"}
 		svc := newTestSvc(
 			&git.ClientMock{
-				BranchExistsFunc: mockBranchExists("old"),
+				ListBranchesFunc: mockListBranches("old"),
 				RenameBranchFunc: func(old string, newName string) error {
 					return fmt.Errorf("rename failed")
 				},
@@ -342,9 +318,8 @@ func TestRename(t *testing.T) {
 
 	t.Run("passes initCmd to tmux when worktree newly created", func(t *testing.T) {
 		repoRoot := t.TempDir()
-		t.Setenv("SHELL", "/bin/zsh")
 		g := &git.ClientMock{
-			BranchExistsFunc: mockBranchExists("old"),
+			ListBranchesFunc: mockListBranches("old"),
 			RenameBranchFunc: func(old string, newName string) error {
 				return nil
 			},
@@ -371,8 +346,8 @@ func TestRename(t *testing.T) {
 			SwitchClientFunc: func(session string, window string) error { return nil },
 		}
 
-		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo", PostNewHooks: []string{"echo hello"}}
-		svc := NewService(nil, g, tm, WithCommonParams(cp))
+		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo", Shell: "/bin/zsh", PostNewHooks: []string{"echo hello"}}
+		svc := NewService(g, tm, WithCommonParams(cp))
 		_, err := svc.Rename(context.Background(), RenameParams{
 			Old: "old",
 			New: "new",

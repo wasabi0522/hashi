@@ -10,6 +10,12 @@ import (
 	"strings"
 )
 
+// IsExitError reports whether err wraps an *exec.ExitError.
+func IsExitError(err error) bool {
+	var exitErr *osexec.ExitError
+	return errors.As(err, &exitErr)
+}
+
 // IsExitCode reports whether err wraps an *exec.ExitError with the given exit code.
 func IsExitCode(err error, code int) bool {
 	var exitErr *osexec.ExitError
