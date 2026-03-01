@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.0.3](https://github.com/wasabi0522/hashi/compare/v0.0.2...v0.0.3) - 2026-03-01
+- Address code review findings: security, performance, refactoring by @wasabi0522 in https://github.com/wasabi0522/hashi/pull/11
+- Fix switch to default branch not verifying repo root checkout by @wasabi0522 in https://github.com/wasabi0522/hashi/pull/13
+
 ## [v0.0.2](https://github.com/wasabi0522/hashi/compare/v0.0.1...v0.0.2) - 2026-02-28
 - Fix hashi list showing unmanaged tmux windows as orphaned by @wasabi0522 in https://github.com/wasabi0522/hashi/pull/9
 
