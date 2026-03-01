@@ -162,7 +162,8 @@ func TestSwitch(t *testing.T) {
 
 	t.Run("switches to default branch", func(t *testing.T) {
 		g := &git.ClientMock{
-			BranchExistsFunc: mockBranchExists("main"),
+			BranchExistsFunc:  mockBranchExists("main"),
+			CurrentBranchFunc: func(dir string) (string, error) { return "main", nil },
 		}
 		tm := &tmux.ClientMock{
 			HasSessionFunc: func(name string) (bool, error) {
@@ -187,6 +188,76 @@ func TestSwitch(t *testing.T) {
 			Branch: "main",
 		})
 		require.NoError(t, err)
+	})
+
+	t.Run("auto-switches repo root to default branch when clean", func(t *testing.T) {
+		var switchedTo string
+		g := &git.ClientMock{
+			BranchExistsFunc:  mockBranchExists("main"),
+			CurrentBranchFunc: func(dir string) (string, error) { return "feature", nil },
+			HasUncommittedChangesFunc: func(worktreePath string) (bool, error) {
+				return false, nil
+			},
+			SwitchBranchFunc: func(dir, branch string) error {
+				switchedTo = branch
+				return nil
+			},
+		}
+		tm := &tmux.ClientMock{
+			HasSessionFunc: func(name string) (bool, error) { return true, nil },
+			ListWindowsFunc: func(session string) ([]tmux.Window, error) {
+				return []tmux.Window{{Name: "main", Active: false}}, nil
+			},
+			PaneCurrentCommandFunc: func(session, window string) (string, error) { return "zsh", nil },
+			SendKeysFunc:           func(session, window string, keys ...string) error { return nil },
+			IsInsideTmuxFunc:       func() bool { return true },
+			SwitchClientFunc:       func(session, window string) error { return nil },
+		}
+
+		cp := CommonParams{RepoRoot: "/repo", WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
+		svc := newTestSvc(g, tm, WithCommonParams(cp))
+		_, err := svc.Switch(context.Background(), SwitchParams{Branch: "main"})
+		require.NoError(t, err)
+		assert.Equal(t, "main", switchedTo)
+	})
+
+	t.Run("errors when repo root has uncommitted changes on wrong branch", func(t *testing.T) {
+		g := &git.ClientMock{
+			BranchExistsFunc:  mockBranchExists("main"),
+			CurrentBranchFunc: func(dir string) (string, error) { return "feature", nil },
+			HasUncommittedChangesFunc: func(worktreePath string) (bool, error) {
+				return true, nil
+			},
+		}
+
+		cp := CommonParams{RepoRoot: "/repo", WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
+		svc := newTestSvc(g, stubTmux(), WithCommonParams(cp))
+		_, err := svc.Switch(context.Background(), SwitchParams{Branch: "main"})
+		require.Error(t, err)
+
+		var mismatchErr *RepoRootBranchMismatchError
+		assert.ErrorAs(t, err, &mismatchErr)
+		assert.Equal(t, "main", mismatchErr.Expected)
+		assert.Equal(t, "feature", mismatchErr.Actual)
+	})
+
+	t.Run("errors when git switch fails on clean repo root", func(t *testing.T) {
+		g := &git.ClientMock{
+			BranchExistsFunc:  mockBranchExists("main"),
+			CurrentBranchFunc: func(dir string) (string, error) { return "feature", nil },
+			HasUncommittedChangesFunc: func(worktreePath string) (bool, error) {
+				return false, nil
+			},
+			SwitchBranchFunc: func(dir, branch string) error {
+				return fmt.Errorf("switch failed")
+			},
+		}
+
+		cp := CommonParams{RepoRoot: "/repo", WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
+		svc := newTestSvc(g, stubTmux(), WithCommonParams(cp))
+		_, err := svc.Switch(context.Background(), SwitchParams{Branch: "main"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "switching repo root")
 	})
 
 	t.Run("EnsureWorktree error", func(t *testing.T) {
