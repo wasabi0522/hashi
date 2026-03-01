@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.0.5](https://github.com/wasabi0522/hashi/compare/v0.0.4...v0.0.5) - 2026-03-01
+- Streamline release pipeline: let GoReleaser own the entire release by @wasabi0522 in https://github.com/wasabi0522/hashi/pull/17
+
 ## [v0.0.4](https://github.com/wasabi0522/hashi/compare/v0.0.3...v0.0.4) - 2026-03-01
 
 ## [v0.0.4](https://github.com/wasabi0522/hashi/compare/v0.0.3...v0.0.4) - 2026-03-01
