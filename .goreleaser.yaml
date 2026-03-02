@@ -22,6 +22,9 @@ homebrew_casks:
     license: MIT
     binaries:
       - hashi
+    dependencies:
+      - formula: git
+      - formula: tmux
     url:
       verified: github.com/wasabi0522/hashi
     hooks:
