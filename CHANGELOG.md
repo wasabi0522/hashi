@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.0.6](https://github.com/wasabi0522/hashi/compare/v0.0.5...v0.0.6) - 2026-03-03
+- Add Homebrew dependency info for git and tmux by @wasabi0522 in https://github.com/wasabi0522/hashi/pull/19
+- Fix findWorktree matching main working tree by @wasabi0522 in https://github.com/wasabi0522/hashi/pull/21
+- Bump GitHub Actions to latest major versions by @wasabi0522 in https://github.com/wasabi0522/hashi/pull/22
+
 ## [v0.0.5](https://github.com/wasabi0522/hashi/compare/v0.0.4...v0.0.5) - 2026-03-01
 - Streamline release pipeline: let GoReleaser own the entire release by @wasabi0522 in https://github.com/wasabi0522/hashi/pull/17
 
