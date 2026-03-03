@@ -87,7 +87,7 @@ func (s *Service) findOrCreateWorktree(branch string) (string, bool, error) {
 	if err != nil {
 		return "", false, fmt.Errorf("listing worktrees: %w", err)
 	}
-	if wt := findWorktree(worktrees, branch); wt != nil {
+	if wt := findWorktree(worktrees, branch); wt != nil && !wt.IsMain {
 		return wt.Path, false, nil
 	}
 

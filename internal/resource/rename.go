@@ -77,7 +77,7 @@ func (s *Service) renameWorktree(p RenameParams) (string, bool, error) {
 	if err != nil {
 		return "", false, err
 	}
-	if wt := findWorktree(worktrees, p.New); wt != nil {
+	if wt := findWorktree(worktrees, p.New); wt != nil && !wt.IsMain {
 		wtPath, err := s.moveWorktree(p, wt.Path)
 		return wtPath, false, err
 	}

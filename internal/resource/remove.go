@@ -49,7 +49,7 @@ func (s *Service) PrepareRemove(ctx context.Context, branch string) (RemoveCheck
 	if err != nil {
 		return RemoveCheck{}, fmt.Errorf("listing worktrees: %w", err)
 	}
-	if wt := findWorktree(worktrees, branch); wt != nil {
+	if wt := findWorktree(worktrees, branch); wt != nil && !wt.IsMain {
 		check.HasWorktree = true
 		check.WorktreePath = wt.Path
 	}
