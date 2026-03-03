@@ -43,6 +43,7 @@ func TestPrepareRemove(t *testing.T) {
 				BranchExistsFunc: mockBranchExists("feature"),
 				ListWorktreesFunc: func() ([]git.Worktree, error) {
 					return []git.Worktree{
+						{Path: "/repo", Branch: "main", IsMain: true},
 						{Path: "/repo/.worktrees/feature", Branch: "feature"},
 					}, nil
 				},
@@ -104,6 +105,55 @@ func TestPrepareRemove(t *testing.T) {
 
 		_, err := svc.PrepareRemove(context.Background(), "feat")
 		assert.Error(t, err)
+	})
+
+	t.Run("branch checked out at main worktree is not treated as worktree", func(t *testing.T) {
+		svc := newTestSvc(
+			&git.ClientMock{
+				BranchExistsFunc: mockBranchExists("feature"),
+				ListWorktreesFunc: func() ([]git.Worktree, error) {
+					return []git.Worktree{
+						{Path: "/repo", Branch: "feature", IsMain: true},
+					}, nil
+				},
+				IsMergedFunc: func(branch string, base string) (bool, error) { return true, nil },
+			},
+			&tmux.ClientMock{
+				HasSessionFunc: func(name string) (bool, error) { return false, nil },
+			},
+			WithCommonParams(defaultCP()),
+		)
+
+		check, err := svc.PrepareRemove(context.Background(), "feature")
+		require.NoError(t, err)
+		assert.True(t, check.HasBranch)
+		assert.False(t, check.HasWorktree)
+		assert.Empty(t, check.WorktreePath)
+	})
+
+	t.Run("main and linked worktree coexist: linked worktree matches", func(t *testing.T) {
+		svc := newTestSvc(
+			&git.ClientMock{
+				BranchExistsFunc: mockBranchExists("feature"),
+				ListWorktreesFunc: func() ([]git.Worktree, error) {
+					return []git.Worktree{
+						{Path: "/repo", Branch: "main", IsMain: true},
+						{Path: "/repo/.worktrees/feature", Branch: "feature"},
+					}, nil
+				},
+				HasUncommittedChangesFunc: func(path string) (bool, error) { return false, nil },
+				IsMergedFunc:              func(branch string, base string) (bool, error) { return true, nil },
+			},
+			&tmux.ClientMock{
+				HasSessionFunc: func(name string) (bool, error) { return false, nil },
+			},
+			WithCommonParams(defaultCP()),
+		)
+
+		check, err := svc.PrepareRemove(context.Background(), "feature")
+		require.NoError(t, err)
+		assert.True(t, check.HasWorktree)
+		assert.Equal(t, "/repo/.worktrees/feature", check.WorktreePath)
 	})
 
 	t.Run("branch exists without worktree (merged)", func(t *testing.T) {
