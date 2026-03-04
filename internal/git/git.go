@@ -2,8 +2,8 @@ package git
 
 //go:generate moq -out git_mock.go . Client
 
-// Querier abstracts read-only git operations needed for context resolution.
-type Querier interface {
+// RepoReader abstracts read-only git operations needed for context resolution.
+type RepoReader interface {
 	GitCommonDir() (string, error)
 	SymbolicRef(ref string) (string, error)
 	RemoteGetURL(remote string) (string, error)
@@ -20,7 +20,7 @@ type BranchReader interface {
 
 // BranchWriter abstracts write branch operations.
 type BranchWriter interface {
-	RenameBranch(old, new string) error
+	RenameBranch(oldName, newName string) error
 	DeleteBranch(name string) error
 	DeleteBranchFrom(dir, name string) error
 	SwitchBranch(dir, branch string) error
@@ -37,7 +37,7 @@ type WorktreeManager interface {
 
 // Client abstracts git operations for testing.
 type Client interface {
-	Querier
+	RepoReader
 	BranchReader
 	BranchWriter
 	WorktreeManager

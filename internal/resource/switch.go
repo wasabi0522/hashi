@@ -32,8 +32,8 @@ func (s *Service) Switch(ctx context.Context, p SwitchParams) (*OperationResult,
 		}
 	}
 
-	initCmd := s.buildInitCmd(wtCreated)
-	if err := s.ensureTmux(s.cp.SessionName, p.Branch, wtPath, initCmd); err != nil {
+	initCmd := s.buildInitCmd(wtCreated, false)
+	if err := s.ensureTmux(s.params.SessionName, p.Branch, wtPath, initCmd); err != nil {
 		return nil, fmt.Errorf("ensuring tmux: %w", err)
 	}
 

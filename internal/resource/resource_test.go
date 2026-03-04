@@ -80,6 +80,28 @@ func TestStatusUnmarshalJSON(t *testing.T) {
 	})
 }
 
+func TestOperationTypeString(t *testing.T) {
+	assert.Equal(t, "new", OpNew.String())
+	assert.Equal(t, "switch", OpSwitch.String())
+	assert.Equal(t, "rename", OpRename.String())
+	assert.Equal(t, "unknown", OperationType(99).String())
+}
+
+func TestStatusOutOfBounds(t *testing.T) {
+	s := Status(999)
+	assert.Equal(t, "unknown", s.String())
+	assert.Equal(t, "", s.Label())
+	assert.Equal(t, "", s.SuggestedCommand())
+	assert.False(t, s.IsHealthy())
+}
+
+func TestWithShellCommands(t *testing.T) {
+	custom := map[string]struct{}{"mysh": {}}
+	svc := NewService(nil, nil, WithShellCommands(custom))
+	assert.True(t, svc.isShellCommand("mysh"))
+	assert.False(t, svc.isShellCommand("bash"))
+}
+
 func TestStatusJSONRoundTrip(t *testing.T) {
 	for _, s := range []Status{StatusOK, StatusWorktreeMissing, StatusOrphanedWindow, StatusOrphanedWorktree} {
 		data, err := json.Marshal(s)

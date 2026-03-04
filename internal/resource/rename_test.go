@@ -16,7 +16,7 @@ import (
 func TestRename(t *testing.T) {
 	t.Run("errors when renaming default branch", func(t *testing.T) {
 		cp := CommonParams{DefaultBranch: "main"}
-		svc := newTestSvc(&git.ClientMock{}, stubTmux(), WithCommonParams(cp))
+		svc := NewService(&git.ClientMock{}, stubTmux(), WithCommonParams(cp))
 
 		_, err := svc.Rename(context.Background(), RenameParams{
 			Old: "main",
@@ -28,7 +28,7 @@ func TestRename(t *testing.T) {
 
 	t.Run("errors when old branch does not exist", func(t *testing.T) {
 		cp := CommonParams{DefaultBranch: "main"}
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{ListBranchesFunc: mockListBranches()},
 			stubTmux(),
 			WithCommonParams(cp),
@@ -44,7 +44,7 @@ func TestRename(t *testing.T) {
 
 	t.Run("errors when new branch already exists", func(t *testing.T) {
 		cp := CommonParams{DefaultBranch: "main"}
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{ListBranchesFunc: mockListBranches("old", "existing")},
 			stubTmux(),
 			WithCommonParams(cp),
@@ -60,7 +60,7 @@ func TestRename(t *testing.T) {
 
 	t.Run("ListBranches error", func(t *testing.T) {
 		cp := CommonParams{DefaultBranch: "main"}
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				ListBranchesFunc: func() ([]string, error) {
 					return nil, fmt.Errorf("git error")
@@ -98,7 +98,7 @@ func TestRename(t *testing.T) {
 		}
 
 		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, stubTmux(), WithCommonParams(cp))
+		svc := NewService(g, stubTmux(), WithCommonParams(cp))
 		_, err := svc.Rename(context.Background(), RenameParams{
 			Old: "old",
 			New: "new",
@@ -131,7 +131,7 @@ func TestRename(t *testing.T) {
 		}
 
 		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, stubTmux(), WithCommonParams(cp))
+		svc := NewService(g, stubTmux(), WithCommonParams(cp))
 		_, err := svc.Rename(context.Background(), RenameParams{
 			Old: "old",
 			New: "new",
@@ -171,7 +171,7 @@ func TestRename(t *testing.T) {
 		}
 
 		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, stubTmux(), WithCommonParams(cp))
+		svc := NewService(g, stubTmux(), WithCommonParams(cp))
 		_, err := svc.Rename(context.Background(), RenameParams{
 			Old: "old",
 			New: "new",
@@ -201,7 +201,7 @@ func TestRename(t *testing.T) {
 		}
 
 		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, stubTmux(), WithCommonParams(cp))
+		svc := NewService(g, stubTmux(), WithCommonParams(cp))
 		_, err := svc.Rename(context.Background(), RenameParams{
 			Old: "old",
 			New: "new",
@@ -247,7 +247,7 @@ func TestRename(t *testing.T) {
 		}
 
 		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, tm, WithCommonParams(cp))
+		svc := NewService(g, tm, WithCommonParams(cp))
 		_, err := svc.Rename(context.Background(), RenameParams{
 			Old: "old",
 			New: "new",
@@ -287,7 +287,7 @@ func TestRename(t *testing.T) {
 		}
 
 		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, tm, WithCommonParams(cp))
+		svc := NewService(g, tm, WithCommonParams(cp))
 		_, err := svc.Rename(context.Background(), RenameParams{
 			Old: "old",
 			New: "new",
@@ -296,9 +296,70 @@ func TestRename(t *testing.T) {
 		assert.True(t, newWindowCreated)
 	})
 
+	t.Run("renameWorktree ListWorktrees error", func(t *testing.T) {
+		var rolledBack bool
+		g := &git.ClientMock{
+			ListBranchesFunc: mockListBranches("old"),
+			RenameBranchFunc: func(old string, newName string) error {
+				if old == "new" && newName == "old" {
+					rolledBack = true
+				}
+				return nil
+			},
+			ListWorktreesFunc: func() ([]git.Worktree, error) {
+				return nil, fmt.Errorf("worktree list error")
+			},
+		}
+
+		cp := CommonParams{RepoRoot: t.TempDir(), WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
+		svc := NewService(g, stubTmux(), WithCommonParams(cp))
+		_, err := svc.Rename(context.Background(), RenameParams{
+			Old: "old",
+			New: "new",
+		})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "renaming worktree")
+		assert.True(t, rolledBack)
+	})
+
+	t.Run("moveWorktree ensureParentDir error", func(t *testing.T) {
+		repoRoot := t.TempDir()
+		oldPath := filepath.Join(repoRoot, "somewhere", "old")
+		require.NoError(t, os.MkdirAll(oldPath, 0755))
+
+		// Block .worktrees with a file so MkdirAll fails
+		require.NoError(t, os.WriteFile(filepath.Join(repoRoot, ".worktrees"), []byte("block"), 0644))
+
+		var rolledBack bool
+		g := &git.ClientMock{
+			ListBranchesFunc: mockListBranches("old"),
+			RenameBranchFunc: func(old string, newName string) error {
+				if old == "new" && newName == "old" {
+					rolledBack = true
+				}
+				return nil
+			},
+			ListWorktreesFunc: func() ([]git.Worktree, error) {
+				return []git.Worktree{
+					{Path: oldPath, Branch: "new"},
+				}, nil
+			},
+		}
+
+		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
+		svc := NewService(g, stubTmux(), WithCommonParams(cp))
+		_, err := svc.Rename(context.Background(), RenameParams{
+			Old: "old",
+			New: "new",
+		})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "creating directory")
+		assert.True(t, rolledBack)
+	})
+
 	t.Run("RenameBranch error", func(t *testing.T) {
 		cp := CommonParams{DefaultBranch: "main"}
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				ListBranchesFunc: mockListBranches("old"),
 				RenameBranchFunc: func(old string, newName string) error {

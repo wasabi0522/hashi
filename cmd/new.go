@@ -6,7 +6,7 @@ import (
 )
 
 func (a *App) newCmd(completeBranches completionFunc) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:               "new <branch> [base]",
 		Aliases:           []string{"n"},
 		Short:             "Create a new branch with worktree and tmux window",
@@ -14,6 +14,8 @@ func (a *App) newCmd(completeBranches completionFunc) *cobra.Command {
 		RunE:              a.runNew,
 		ValidArgsFunction: completeBranches,
 	}
+	cmd.Flags().Bool("no-hooks", false, "Skip post_new hooks")
+	return cmd
 }
 
 func (a *App) runNew(cmd *cobra.Command, args []string) error {
@@ -22,9 +24,10 @@ func (a *App) runNew(cmd *cobra.Command, args []string) error {
 	if len(args) >= 2 {
 		base = args[1]
 	}
+	noHooks, _ := cmd.Flags().GetBool("no-hooks")
 
 	return a.withService(func(svc *resource.Service) error {
-		_, err := svc.New(cmd.Context(), resource.NewParams{Branch: branch, Base: base})
+		_, err := svc.New(cmd.Context(), resource.NewParams{Branch: branch, Base: base, NoHooks: noHooks})
 		return err
 	})
 }

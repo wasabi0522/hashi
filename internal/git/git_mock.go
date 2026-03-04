@@ -56,7 +56,7 @@ var _ Client = &ClientMock{}
 //			RemoveWorktreeFunc: func(path string) error {
 //				panic("mock out the RemoveWorktree method")
 //			},
-//			RenameBranchFunc: func(old string, new string) error {
+//			RenameBranchFunc: func(oldName string, newName string) error {
 //				panic("mock out the RenameBranch method")
 //			},
 //			RepairWorktreesFunc: func() error {
@@ -115,7 +115,7 @@ type ClientMock struct {
 	RemoveWorktreeFunc func(path string) error
 
 	// RenameBranchFunc mocks the RenameBranch method.
-	RenameBranchFunc func(old string, new string) error
+	RenameBranchFunc func(oldName string, newName string) error
 
 	// RepairWorktreesFunc mocks the RepairWorktrees method.
 	RepairWorktreesFunc func() error
@@ -199,10 +199,10 @@ type ClientMock struct {
 		}
 		// RenameBranch holds details about calls to the RenameBranch method.
 		RenameBranch []struct {
-			// Old is the old argument value.
-			Old string
-			// New is the new argument value.
-			New string
+			// OldName is the oldName argument value.
+			OldName string
+			// NewName is the newName argument value.
+			NewName string
 		}
 		// RepairWorktrees holds details about calls to the RepairWorktrees method.
 		RepairWorktrees []struct {
@@ -661,21 +661,21 @@ func (mock *ClientMock) RemoveWorktreeCalls() []struct {
 }
 
 // RenameBranch calls RenameBranchFunc.
-func (mock *ClientMock) RenameBranch(old string, new string) error {
+func (mock *ClientMock) RenameBranch(oldName string, newName string) error {
 	if mock.RenameBranchFunc == nil {
 		panic("ClientMock.RenameBranchFunc: method is nil but Client.RenameBranch was just called")
 	}
 	callInfo := struct {
-		Old string
-		New string
+		OldName string
+		NewName string
 	}{
-		Old: old,
-		New: new,
+		OldName: oldName,
+		NewName: newName,
 	}
 	mock.lockRenameBranch.Lock()
 	mock.calls.RenameBranch = append(mock.calls.RenameBranch, callInfo)
 	mock.lockRenameBranch.Unlock()
-	return mock.RenameBranchFunc(old, new)
+	return mock.RenameBranchFunc(oldName, newName)
 }
 
 // RenameBranchCalls gets all the calls that were made to RenameBranch.
@@ -683,12 +683,12 @@ func (mock *ClientMock) RenameBranch(old string, new string) error {
 //
 //	len(mockedClient.RenameBranchCalls())
 func (mock *ClientMock) RenameBranchCalls() []struct {
-	Old string
-	New string
+	OldName string
+	NewName string
 } {
 	var calls []struct {
-		Old string
-		New string
+		OldName string
+		NewName string
 	}
 	mock.lockRenameBranch.RLock()
 	calls = mock.calls.RenameBranch

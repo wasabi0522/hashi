@@ -5,6 +5,11 @@ import (
 	"strings"
 )
 
+const (
+	asciiSpace = 0x20 // first printable ASCII character
+	asciiDEL   = 0x7f // DEL control character
+)
+
 type branchRule struct {
 	check   func(string) bool
 	message string
@@ -14,7 +19,7 @@ var branchRules = []branchRule{
 	{func(n string) bool { return n == "" }, "branch name must not be empty"},
 	{func(n string) bool { return strings.ContainsAny(n, " \t") }, "branch name contains whitespace"},
 	{func(n string) bool {
-		return strings.ContainsFunc(n, func(r rune) bool { return r < 0x20 || r == 0x7f })
+		return strings.ContainsFunc(n, func(r rune) bool { return r < asciiSpace || r == asciiDEL })
 	}, "branch name contains control character"},
 	{func(n string) bool { return strings.ContainsAny(n, "~^*?[\\") }, "branch name contains invalid character"},
 	{func(n string) bool { return strings.Contains(n, ":") }, "branch name contains ':'"},

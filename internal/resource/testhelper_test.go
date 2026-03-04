@@ -1,7 +1,6 @@
 package resource
 
 import (
-	"github.com/wasabi0522/hashi/internal/git"
 	"github.com/wasabi0522/hashi/internal/tmux"
 )
 
@@ -56,9 +55,4 @@ func stubTmuxInside() *tmux.ClientMock {
 		SwitchClientFunc: func(session string, window string) error { return nil },
 		SendKeysFunc:     func(session string, window string, keys ...string) error { return nil },
 	}
-}
-
-// newTestSvc creates a Service with mock git and tmux clients using NewService.
-func newTestSvc(g git.Client, tm tmux.Client, opts ...Option) *Service {
-	return NewService(g, tm, opts...)
 }

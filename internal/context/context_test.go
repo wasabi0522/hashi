@@ -55,7 +55,7 @@ func TestResolveDefaultBranch(t *testing.T) {
 			return "refs/remotes/origin/develop", nil
 		}
 
-		r := &Resolver{git: mock}
+		r := &Resolver{gitClient: mock}
 		branch, err := r.resolveDefaultBranch()
 		require.NoError(t, err)
 		assert.Equal(t, "develop", branch)
@@ -70,7 +70,7 @@ func TestResolveDefaultBranch(t *testing.T) {
 			return name == "main", nil
 		}
 
-		r := &Resolver{git: mock}
+		r := &Resolver{gitClient: mock}
 		branch, err := r.resolveDefaultBranch()
 		require.NoError(t, err)
 		assert.Equal(t, "main", branch)
@@ -85,7 +85,7 @@ func TestResolveDefaultBranch(t *testing.T) {
 			return name == "master", nil
 		}
 
-		r := &Resolver{git: mock}
+		r := &Resolver{gitClient: mock}
 		branch, err := r.resolveDefaultBranch()
 		require.NoError(t, err)
 		assert.Equal(t, "master", branch)
@@ -100,7 +100,7 @@ func TestResolveDefaultBranch(t *testing.T) {
 			return false, nil
 		}
 
-		r := &Resolver{git: mock}
+		r := &Resolver{gitClient: mock}
 		_, err := r.resolveDefaultBranch()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "could not determine default branch")
@@ -114,7 +114,7 @@ func TestResolveSessionName(t *testing.T) {
 			return "git@github.com:wasabi0522/hashi.git", nil
 		}
 
-		r := &Resolver{git: mock}
+		r := &Resolver{gitClient: mock}
 		name := r.resolveSessionName("/Users/user/repo")
 		assert.Equal(t, "wasabi0522/hashi", name)
 	})
@@ -125,7 +125,7 @@ func TestResolveSessionName(t *testing.T) {
 			return "", errors.New("no remote")
 		}
 
-		r := &Resolver{git: mock}
+		r := &Resolver{gitClient: mock}
 		name := r.resolveSessionName("/Users/user/my-project")
 		assert.Equal(t, "my-project", name)
 	})
@@ -174,7 +174,7 @@ func TestResolveDefaultBranchError(t *testing.T) {
 			return false, errors.New("git error")
 		}
 
-		r := &Resolver{git: mock}
+		r := &Resolver{gitClient: mock}
 		_, err := r.resolveDefaultBranch()
 		require.Error(t, err)
 	})

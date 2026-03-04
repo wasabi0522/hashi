@@ -13,7 +13,7 @@ type Client interface {
 	ListWindows(session string) ([]Window, error)
 	NewWindow(session, name, dir, initCmd string) error
 	KillWindow(session, window string) error
-	RenameWindow(session, old, new string) error
+	RenameWindow(session, oldName, newName string) error
 	SendKeys(session, window string, keys ...string) error
 	PaneCurrentCommand(session, window string) (string, error)
 

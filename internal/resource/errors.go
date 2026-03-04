@@ -37,5 +37,10 @@ type RepoRootBranchMismatchError struct {
 }
 
 func (e *RepoRootBranchMismatchError) Error() string {
-	return fmt.Sprintf("repository root has '%s' checked out instead of '%s'; commit or stash changes and run: git -C <repo-root> switch %s", e.Actual, e.Expected, e.Expected)
+	return fmt.Sprintf("repository root has '%s' checked out instead of '%s'", e.Actual, e.Expected)
+}
+
+// Suggestion returns a remediation hint for the user.
+func (e *RepoRootBranchMismatchError) Suggestion() string {
+	return fmt.Sprintf("commit or stash changes and run: git -C <repo-root> switch %s", e.Expected)
 }

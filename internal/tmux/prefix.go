@@ -25,74 +25,74 @@ func NewPrefixedClient(inner Client, prefix string) Client {
 	return &prefixedClient{inner: inner, prefix: prefix}
 }
 
-func (p *prefixedClient) add(name string) string {
+func (p *prefixedClient) addPrefix(name string) string {
 	return p.prefix + name
 }
 
-func (p *prefixedClient) strip(name string) string {
+func (p *prefixedClient) stripPrefix(name string) string {
 	return strings.TrimPrefix(name, p.prefix)
 }
 
 // Session operations
 
 func (p *prefixedClient) HasSession(name string) (bool, error) {
-	return p.inner.HasSession(p.add(name))
+	return p.inner.HasSession(p.addPrefix(name))
 }
 
 func (p *prefixedClient) NewSession(name, windowName, dir, initCmd string) error {
-	return p.inner.NewSession(p.add(name), p.add(windowName), dir, initCmd)
+	return p.inner.NewSession(p.addPrefix(name), p.addPrefix(windowName), dir, initCmd)
 }
 
 func (p *prefixedClient) KillSession(name string) error {
-	return p.inner.KillSession(p.add(name))
+	return p.inner.KillSession(p.addPrefix(name))
 }
 
 // Window operations
 
 func (p *prefixedClient) ListWindows(session string) ([]Window, error) {
-	windows, err := p.inner.ListWindows(p.add(session))
+	windows, err := p.inner.ListWindows(p.addPrefix(session))
 	if err != nil {
 		return nil, err
 	}
-	managed := windows[:0]
+	managed := windows[:0] // reuse backing array to filter in-place
 	for _, w := range windows {
 		if !strings.HasPrefix(w.Name, p.prefix) {
 			continue
 		}
-		w.Name = p.strip(w.Name)
+		w.Name = p.stripPrefix(w.Name)
 		managed = append(managed, w)
 	}
 	return managed, nil
 }
 
 func (p *prefixedClient) NewWindow(session, name, dir, initCmd string) error {
-	return p.inner.NewWindow(p.add(session), p.add(name), dir, initCmd)
+	return p.inner.NewWindow(p.addPrefix(session), p.addPrefix(name), dir, initCmd)
 }
 
 func (p *prefixedClient) KillWindow(session, window string) error {
-	return p.inner.KillWindow(p.add(session), p.add(window))
+	return p.inner.KillWindow(p.addPrefix(session), p.addPrefix(window))
 }
 
-func (p *prefixedClient) RenameWindow(session, old, new string) error {
-	return p.inner.RenameWindow(p.add(session), p.add(old), p.add(new))
+func (p *prefixedClient) RenameWindow(session, oldName, newName string) error {
+	return p.inner.RenameWindow(p.addPrefix(session), p.addPrefix(oldName), p.addPrefix(newName))
 }
 
 func (p *prefixedClient) SendKeys(session, window string, keys ...string) error {
-	return p.inner.SendKeys(p.add(session), p.add(window), keys...)
+	return p.inner.SendKeys(p.addPrefix(session), p.addPrefix(window), keys...)
 }
 
 func (p *prefixedClient) PaneCurrentCommand(session, window string) (string, error) {
-	return p.inner.PaneCurrentCommand(p.add(session), p.add(window))
+	return p.inner.PaneCurrentCommand(p.addPrefix(session), p.addPrefix(window))
 }
 
 // Connection
 
 func (p *prefixedClient) AttachSession(session, window string) error {
-	return p.inner.AttachSession(p.add(session), p.add(window))
+	return p.inner.AttachSession(p.addPrefix(session), p.addPrefix(window))
 }
 
 func (p *prefixedClient) SwitchClient(session, window string) error {
-	return p.inner.SwitchClient(p.add(session), p.add(window))
+	return p.inner.SwitchClient(p.addPrefix(session), p.addPrefix(window))
 }
 
 // Environment

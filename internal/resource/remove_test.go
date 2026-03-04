@@ -11,9 +11,31 @@ import (
 	"github.com/wasabi0522/hashi/internal/tmux"
 )
 
+func TestRemoveCheck_NeedsWarning(t *testing.T) {
+	t.Run("true when uncommitted", func(t *testing.T) {
+		c := RemoveCheck{HasUncommitted: true}
+		assert.True(t, c.NeedsWarning())
+	})
+
+	t.Run("true when unmerged", func(t *testing.T) {
+		c := RemoveCheck{IsUnmerged: true}
+		assert.True(t, c.NeedsWarning())
+	})
+
+	t.Run("true when both", func(t *testing.T) {
+		c := RemoveCheck{HasUncommitted: true, IsUnmerged: true}
+		assert.True(t, c.NeedsWarning())
+	})
+
+	t.Run("false when neither", func(t *testing.T) {
+		c := RemoveCheck{}
+		assert.False(t, c.NeedsWarning())
+	})
+}
+
 func TestPrepareRemove(t *testing.T) {
 	t.Run("rejects default branch", func(t *testing.T) {
-		svc := newTestSvc(&git.ClientMock{}, stubTmux(), WithCommonParams(defaultCP()))
+		svc := NewService(&git.ClientMock{}, stubTmux(), WithCommonParams(defaultCP()))
 
 		_, err := svc.PrepareRemove(context.Background(), "main")
 		assert.Error(t, err)
@@ -21,7 +43,7 @@ func TestPrepareRemove(t *testing.T) {
 	})
 
 	t.Run("returns error when no resources exist", func(t *testing.T) {
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				BranchExistsFunc:  mockBranchExists(),
 				ListWorktreesFunc: func() ([]git.Worktree, error) { return nil, nil },
@@ -38,7 +60,7 @@ func TestPrepareRemove(t *testing.T) {
 	})
 
 	t.Run("detects all resource states", func(t *testing.T) {
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				BranchExistsFunc: mockBranchExists("feature"),
 				ListWorktreesFunc: func() ([]git.Worktree, error) {
@@ -71,7 +93,7 @@ func TestPrepareRemove(t *testing.T) {
 	})
 
 	t.Run("orphaned window only", func(t *testing.T) {
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				BranchExistsFunc:  mockBranchExists(),
 				ListWorktreesFunc: func() ([]git.Worktree, error) { return nil, nil },
@@ -93,7 +115,7 @@ func TestPrepareRemove(t *testing.T) {
 	})
 
 	t.Run("BranchExists error", func(t *testing.T) {
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				BranchExistsFunc: func(name string) (bool, error) {
 					return false, fmt.Errorf("git error")
@@ -108,7 +130,7 @@ func TestPrepareRemove(t *testing.T) {
 	})
 
 	t.Run("branch checked out at main worktree is not treated as worktree", func(t *testing.T) {
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				BranchExistsFunc: mockBranchExists("feature"),
 				ListWorktreesFunc: func() ([]git.Worktree, error) {
@@ -132,7 +154,7 @@ func TestPrepareRemove(t *testing.T) {
 	})
 
 	t.Run("main and linked worktree coexist: linked worktree matches", func(t *testing.T) {
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				BranchExistsFunc: mockBranchExists("feature"),
 				ListWorktreesFunc: func() ([]git.Worktree, error) {
@@ -157,7 +179,7 @@ func TestPrepareRemove(t *testing.T) {
 	})
 
 	t.Run("branch exists without worktree (merged)", func(t *testing.T) {
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				BranchExistsFunc:  mockBranchExists("feat"),
 				ListWorktreesFunc: func() ([]git.Worktree, error) { return nil, nil },
@@ -180,7 +202,7 @@ func TestPrepareRemove(t *testing.T) {
 func TestExecuteRemove(t *testing.T) {
 	t.Run("removes all resources", func(t *testing.T) {
 		var killedWindow, removedWT, deletedBranch bool
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				RemoveWorktreeFunc:   func(path string) error { removedWT = true; return nil },
 				DeleteBranchFromFunc: func(dir string, name string) error { deletedBranch = true; return nil },
@@ -216,7 +238,7 @@ func TestExecuteRemove(t *testing.T) {
 
 	t.Run("switches away from active window before removal", func(t *testing.T) {
 		var ensureTmuxCalled bool
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				RemoveWorktreeFunc:   func(path string) error { return nil },
 				DeleteBranchFromFunc: func(dir string, name string) error { return nil },
@@ -258,7 +280,7 @@ func TestExecuteRemove(t *testing.T) {
 
 	t.Run("kills session when no windows remain", func(t *testing.T) {
 		var sessionKilled bool
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				RemoveWorktreeFunc:   func(path string) error { return nil },
 				DeleteBranchFromFunc: func(dir string, name string) error { return nil },
@@ -289,7 +311,7 @@ func TestExecuteRemove(t *testing.T) {
 	})
 
 	t.Run("error from RemoveWorktree", func(t *testing.T) {
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				RemoveWorktreeFunc: func(path string) error { return fmt.Errorf("remove failed") },
 			},
@@ -313,7 +335,7 @@ func TestExecuteRemove(t *testing.T) {
 	})
 
 	t.Run("error from DeleteBranch", func(t *testing.T) {
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				DeleteBranchFromFunc: func(dir string, name string) error { return fmt.Errorf("delete failed") },
 			},
@@ -334,7 +356,7 @@ func TestExecuteRemove(t *testing.T) {
 	})
 
 	t.Run("EnsureTmux error on active window", func(t *testing.T) {
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{},
 			&tmux.ClientMock{
 				HasSessionFunc: func(name string) (bool, error) { return true, nil },
@@ -356,7 +378,7 @@ func TestExecuteRemove(t *testing.T) {
 	})
 
 	t.Run("KillWindow error", func(t *testing.T) {
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{},
 			&tmux.ClientMock{
 				HasSessionFunc: func(name string) (bool, error) { return false, nil },
@@ -378,7 +400,7 @@ func TestExecuteRemove(t *testing.T) {
 	})
 
 	t.Run("skips missing resources", func(t *testing.T) {
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{},
 			&tmux.ClientMock{
 				HasSessionFunc: func(name string) (bool, error) { return false, nil },

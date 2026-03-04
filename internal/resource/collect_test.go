@@ -13,7 +13,7 @@ import (
 
 func TestCollectState(t *testing.T) {
 	t.Run("all resources present", func(t *testing.T) {
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				ListWorktreesFunc: func() ([]git.Worktree, error) {
 					return []git.Worktree{
@@ -51,7 +51,7 @@ func TestCollectState(t *testing.T) {
 	})
 
 	t.Run("no tmux session", func(t *testing.T) {
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				ListWorktreesFunc: func() ([]git.Worktree, error) {
 					return []git.Worktree{
@@ -77,7 +77,7 @@ func TestCollectState(t *testing.T) {
 	})
 
 	t.Run("worktree missing (window + branch exist)", func(t *testing.T) {
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				ListWorktreesFunc: func() ([]git.Worktree, error) {
 					return []git.Worktree{
@@ -109,7 +109,7 @@ func TestCollectState(t *testing.T) {
 	})
 
 	t.Run("orphaned window (window exists, no branch)", func(t *testing.T) {
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				ListWorktreesFunc: func() ([]git.Worktree, error) {
 					return []git.Worktree{
@@ -140,7 +140,7 @@ func TestCollectState(t *testing.T) {
 	})
 
 	t.Run("orphaned worktree (worktree exists but branch deleted)", func(t *testing.T) {
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				ListWorktreesFunc: func() ([]git.Worktree, error) {
 					return []git.Worktree{
@@ -166,7 +166,7 @@ func TestCollectState(t *testing.T) {
 	})
 
 	t.Run("ListBranches error", func(t *testing.T) {
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				ListWorktreesFunc: func() ([]git.Worktree, error) {
 					return []git.Worktree{
@@ -188,7 +188,7 @@ func TestCollectState(t *testing.T) {
 	})
 
 	t.Run("ListWorktrees error", func(t *testing.T) {
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				ListWorktreesFunc: func() ([]git.Worktree, error) {
 					return nil, fmt.Errorf("git error")
@@ -203,7 +203,7 @@ func TestCollectState(t *testing.T) {
 	})
 
 	t.Run("detached HEAD worktree skipped", func(t *testing.T) {
-		svc := newTestSvc(
+		svc := NewService(
 			&git.ClientMock{
 				ListWorktreesFunc: func() ([]git.Worktree, error) {
 					return []git.Worktree{
