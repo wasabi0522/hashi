@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"path/filepath"
 	"strings"
 
 	"github.com/wasabi0522/hashi/internal/git"
@@ -27,6 +28,14 @@ func findWorktree(worktrees []git.Worktree, branch string) *git.Worktree {
 	return findBy(worktrees, func(wt git.Worktree) string { return wt.Branch }, branch)
 }
 
+// findNonMainWorktree returns the non-main worktree for branch, or nil.
+func findNonMainWorktree(worktrees []git.Worktree, branch string) *git.Worktree {
+	if wt := findWorktree(worktrees, branch); wt != nil && !wt.IsMain {
+		return wt
+	}
+	return nil
+}
+
 // toSet converts a slice to a set (map[T]struct{}).
 func toSet[T comparable](items []T) map[T]struct{} {
 	m := make(map[T]struct{}, len(items))
@@ -48,4 +57,11 @@ func toMap[T any, K comparable](items []T, key func(T) K) map[K]T {
 // shellQuote wraps s in POSIX single quotes, escaping any embedded single quotes.
 func shellQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
+}
+
+// containedIn reports whether child is under parent after cleaning both paths.
+func containedIn(parent, child string) bool {
+	p := filepath.Clean(parent) + string(filepath.Separator)
+	c := filepath.Clean(child) + string(filepath.Separator)
+	return strings.HasPrefix(c, p)
 }

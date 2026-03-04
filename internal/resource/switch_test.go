@@ -40,7 +40,7 @@ func TestSwitch(t *testing.T) {
 		}
 
 		cp := CommonParams{RepoRoot: "/repo", WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, tm, WithCommonParams(cp))
+		svc := NewService(g, tm, WithCommonParams(cp))
 		_, err := svc.Switch(context.Background(), SwitchParams{
 			Branch: "feature",
 		})
@@ -53,7 +53,7 @@ func TestSwitch(t *testing.T) {
 		}
 
 		cp := CommonParams{RepoRoot: "/repo", WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, stubTmux(), WithCommonParams(cp))
+		svc := NewService(g, stubTmux(), WithCommonParams(cp))
 		_, err := svc.Switch(context.Background(), SwitchParams{
 			Branch: "nonexistent",
 		})
@@ -77,7 +77,7 @@ func TestSwitch(t *testing.T) {
 		tm := stubTmuxInside()
 
 		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, tm, WithCommonParams(cp))
+		svc := NewService(g, tm, WithCommonParams(cp))
 		_, err := svc.Switch(context.Background(), SwitchParams{
 			Branch: "feature",
 		})
@@ -92,7 +92,7 @@ func TestSwitch(t *testing.T) {
 			},
 		}
 
-		svc := newTestSvc(g, stubTmux())
+		svc := NewService(g, stubTmux())
 		_, err := svc.Switch(context.Background(), SwitchParams{
 			Branch: "feature",
 		})
@@ -153,7 +153,7 @@ func TestSwitch(t *testing.T) {
 		}
 
 		cp := CommonParams{RepoRoot: "/repo", WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, tm, WithCommonParams(cp))
+		svc := NewService(g, tm, WithCommonParams(cp))
 		_, err := svc.Switch(context.Background(), SwitchParams{
 			Branch: "feature",
 		})
@@ -183,7 +183,7 @@ func TestSwitch(t *testing.T) {
 		}
 
 		cp := CommonParams{RepoRoot: "/repo", WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, tm, WithCommonParams(cp))
+		svc := NewService(g, tm, WithCommonParams(cp))
 		_, err := svc.Switch(context.Background(), SwitchParams{
 			Branch: "main",
 		})
@@ -215,7 +215,7 @@ func TestSwitch(t *testing.T) {
 		}
 
 		cp := CommonParams{RepoRoot: "/repo", WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, tm, WithCommonParams(cp))
+		svc := NewService(g, tm, WithCommonParams(cp))
 		_, err := svc.Switch(context.Background(), SwitchParams{Branch: "main"})
 		require.NoError(t, err)
 		assert.Equal(t, "main", switchedTo)
@@ -231,7 +231,7 @@ func TestSwitch(t *testing.T) {
 		}
 
 		cp := CommonParams{RepoRoot: "/repo", WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, stubTmux(), WithCommonParams(cp))
+		svc := NewService(g, stubTmux(), WithCommonParams(cp))
 		_, err := svc.Switch(context.Background(), SwitchParams{Branch: "main"})
 		require.Error(t, err)
 
@@ -254,10 +254,35 @@ func TestSwitch(t *testing.T) {
 		}
 
 		cp := CommonParams{RepoRoot: "/repo", WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, stubTmux(), WithCommonParams(cp))
+		svc := NewService(g, stubTmux(), WithCommonParams(cp))
 		_, err := svc.Switch(context.Background(), SwitchParams{Branch: "main"})
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "switching repo root")
+	})
+
+	t.Run("copyFiles error on created worktree", func(t *testing.T) {
+		repoRoot := t.TempDir()
+		g := &git.ClientMock{
+			BranchExistsFunc: mockBranchExists("feature"),
+			ListWorktreesFunc: func() ([]git.Worktree, error) {
+				return nil, nil
+			},
+			AddWorktreeFunc: func(path string, branch string) error {
+				return nil
+			},
+		}
+
+		cp := CommonParams{
+			RepoRoot:      repoRoot,
+			WorktreeDir:   ".worktrees",
+			DefaultBranch: "main",
+			SessionName:   "org/repo",
+			CopyFiles:     []string{"../../../etc/passwd"},
+		}
+		svc := NewService(g, stubTmux(), WithCommonParams(cp))
+		_, err := svc.Switch(context.Background(), SwitchParams{Branch: "feature"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "escapes repository root")
 	})
 
 	t.Run("EnsureWorktree error", func(t *testing.T) {
@@ -269,7 +294,7 @@ func TestSwitch(t *testing.T) {
 		}
 
 		cp := CommonParams{RepoRoot: "/repo", WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, stubTmux(), WithCommonParams(cp))
+		svc := NewService(g, stubTmux(), WithCommonParams(cp))
 		_, err := svc.Switch(context.Background(), SwitchParams{
 			Branch: "feature",
 		})

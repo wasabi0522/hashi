@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,6 +10,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// errReader is a reader that always returns an error.
+type errReader struct{ err error }
+
+func (r *errReader) Read([]byte) (int, error) { return 0, r.err }
 
 func TestLoad(t *testing.T) {
 	t.Run("defaults when no file", func(t *testing.T) {
@@ -152,5 +158,12 @@ func TestLoadFromReader(t *testing.T) {
 		_, err := LoadFromReader(r)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "relative path")
+	})
+
+	t.Run("reader error", func(t *testing.T) {
+		r := &errReader{err: fmt.Errorf("read failed")}
+		_, err := LoadFromReader(r)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "reading config")
 	})
 }

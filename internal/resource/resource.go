@@ -24,7 +24,7 @@ func WithLogger(l Logger) Option {
 
 // WithCommonParams sets the common parameters for operations.
 func WithCommonParams(cp CommonParams) Option {
-	return func(s *Service) { s.cp = cp }
+	return func(s *Service) { s.params = cp }
 }
 
 // WithShellCommands overrides the set of commands recognized as interactive shells.
@@ -36,7 +36,7 @@ func WithShellCommands(m map[string]struct{}) Option {
 type Service struct {
 	git           git.Client
 	tmux          tmux.Client
-	cp            CommonParams
+	params        CommonParams
 	shellCommands map[string]struct{}
 	logger        Logger
 }
@@ -72,8 +72,13 @@ type CommonParams struct {
 }
 
 // WorktreePath returns the filesystem path for the given branch's worktree.
+// It panics if the resulting path escapes the repo root (path traversal).
 func (p CommonParams) WorktreePath(branch string) string {
-	return filepath.Join(p.RepoRoot, p.WorktreeDir, branch)
+	path := filepath.Join(p.RepoRoot, p.WorktreeDir, branch)
+	if !containedIn(p.RepoRoot, path) {
+		panic(fmt.Sprintf("worktree path %q escapes repo root %q", path, p.RepoRoot))
+	}
+	return path
 }
 
 // Status represents the health status of a hashi-managed resource.

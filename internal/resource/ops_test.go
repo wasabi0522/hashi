@@ -15,7 +15,7 @@ import (
 func TestEnsureWorktree(t *testing.T) {
 	t.Run("default branch returns repo root", func(t *testing.T) {
 		cp := CommonParams{RepoRoot: "/repo", WorktreeDir: ".worktrees", DefaultBranch: "main"}
-		svc := newTestSvc(&git.ClientMock{
+		svc := NewService(&git.ClientMock{
 			CurrentBranchFunc: func(dir string) (string, error) { return "main", nil },
 		}, stubTmux(), WithCommonParams(cp))
 
@@ -27,7 +27,7 @@ func TestEnsureWorktree(t *testing.T) {
 
 	t.Run("existing worktree returns its path", func(t *testing.T) {
 		cp := CommonParams{RepoRoot: "/repo", WorktreeDir: ".worktrees", DefaultBranch: "main"}
-		svc := newTestSvc(&git.ClientMock{
+		svc := NewService(&git.ClientMock{
 			ListWorktreesFunc: func() ([]git.Worktree, error) {
 				return []git.Worktree{
 					{Path: "/repo/.worktrees/feature", Branch: "feature"},
@@ -45,7 +45,7 @@ func TestEnsureWorktree(t *testing.T) {
 		repoRoot := t.TempDir()
 		var addedPath, addedBranch string
 		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main"}
-		svc := newTestSvc(&git.ClientMock{
+		svc := NewService(&git.ClientMock{
 			ListWorktreesFunc: func() ([]git.Worktree, error) {
 				return nil, nil
 			},
@@ -66,7 +66,7 @@ func TestEnsureWorktree(t *testing.T) {
 
 	t.Run("error from ListWorktrees", func(t *testing.T) {
 		cp := CommonParams{RepoRoot: "/repo", WorktreeDir: ".worktrees", DefaultBranch: "main"}
-		svc := newTestSvc(&git.ClientMock{
+		svc := NewService(&git.ClientMock{
 			ListWorktreesFunc: func() ([]git.Worktree, error) {
 				return nil, fmt.Errorf("git error")
 			},
@@ -79,7 +79,7 @@ func TestEnsureWorktree(t *testing.T) {
 	t.Run("error from AddWorktree", func(t *testing.T) {
 		repoRoot := t.TempDir()
 		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main"}
-		svc := newTestSvc(&git.ClientMock{
+		svc := NewService(&git.ClientMock{
 			ListWorktreesFunc: func() ([]git.Worktree, error) {
 				return nil, nil
 			},
@@ -288,7 +288,7 @@ func TestBuildInitCmd(t *testing.T) {
 			Shell:        "/bin/zsh",
 			PostNewHooks: []string{"npm install", "echo done"},
 		}))
-		cmd := svc.buildInitCmd(true)
+		cmd := svc.buildInitCmd(true, false)
 		assert.Equal(t, "sh -c 'npm install' && sh -c 'echo done'; exec '/bin/zsh'", cmd)
 	})
 
@@ -297,7 +297,7 @@ func TestBuildInitCmd(t *testing.T) {
 			Shell:        "/bin/bash",
 			PostNewHooks: []string{"npm install"},
 		}))
-		cmd := svc.buildInitCmd(true)
+		cmd := svc.buildInitCmd(true, false)
 		assert.Equal(t, "sh -c 'npm install'; exec '/bin/bash'", cmd)
 	})
 
@@ -306,7 +306,7 @@ func TestBuildInitCmd(t *testing.T) {
 			Shell:        "/bin/zsh",
 			PostNewHooks: nil,
 		}))
-		cmd := svc.buildInitCmd(true)
+		cmd := svc.buildInitCmd(true, false)
 		assert.Empty(t, cmd)
 	})
 
@@ -315,7 +315,7 @@ func TestBuildInitCmd(t *testing.T) {
 			Shell:        "/bin/zsh",
 			PostNewHooks: []string{"echo hello"},
 		}))
-		cmd := svc.buildInitCmd(false)
+		cmd := svc.buildInitCmd(false, false)
 		assert.Empty(t, cmd)
 	})
 
@@ -323,7 +323,7 @@ func TestBuildInitCmd(t *testing.T) {
 		svc := NewService(nil, nil, WithCommonParams(CommonParams{
 			PostNewHooks: []string{"echo hello"},
 		}))
-		cmd := svc.buildInitCmd(true)
+		cmd := svc.buildInitCmd(true, false)
 		assert.Equal(t, "sh -c 'echo hello'; exec 'sh'", cmd)
 	})
 
@@ -332,7 +332,7 @@ func TestBuildInitCmd(t *testing.T) {
 			Shell:        "/bin/zsh",
 			PostNewHooks: []string{"echo 'hello'"},
 		}))
-		cmd := svc.buildInitCmd(true)
+		cmd := svc.buildInitCmd(true, false)
 		assert.Equal(t, "sh -c 'echo '\\''hello'\\'''; exec '/bin/zsh'", cmd)
 	})
 }
@@ -437,6 +437,71 @@ func TestCopyFiles(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, os.FileMode(0755), info.Mode().Perm())
 	})
+}
+
+func TestCopyFile(t *testing.T) {
+	t.Run("returns error when source does not exist", func(t *testing.T) {
+		dst := filepath.Join(t.TempDir(), "out")
+		err := copyFile("/nonexistent/file", dst)
+		assert.Error(t, err)
+	})
+
+	t.Run("returns error when dest parent cannot be created", func(t *testing.T) {
+		src := filepath.Join(t.TempDir(), "src.txt")
+		require.NoError(t, os.WriteFile(src, []byte("data"), 0644))
+		blocker := filepath.Join(t.TempDir(), "blocker")
+		require.NoError(t, os.WriteFile(blocker, []byte("x"), 0644))
+		dst := filepath.Join(blocker, "sub", "out.txt")
+		err := copyFile(src, dst)
+		assert.Error(t, err)
+	})
+}
+
+func TestCopyFiles_skipsSymlinks(t *testing.T) {
+	repoRoot := t.TempDir()
+	wtPath := filepath.Join(repoRoot, ".worktrees", "feat")
+	require.NoError(t, os.MkdirAll(wtPath, 0755))
+
+	realFile := filepath.Join(repoRoot, "real.txt")
+	require.NoError(t, os.WriteFile(realFile, []byte("real"), 0644))
+	linkFile := filepath.Join(repoRoot, "link.txt")
+	require.NoError(t, os.Symlink(realFile, linkFile))
+
+	svc := NewService(nil, nil, WithCommonParams(CommonParams{
+		RepoRoot:  repoRoot,
+		CopyFiles: []string{"link.txt"},
+	}))
+
+	err := svc.copyFiles(wtPath)
+	require.NoError(t, err)
+
+	_, err = os.Stat(filepath.Join(wtPath, "link.txt"))
+	assert.True(t, os.IsNotExist(err), "symlink should be skipped")
+}
+
+func TestCopyDir_skipsSymlinks(t *testing.T) {
+	repoRoot := t.TempDir()
+	wtPath := filepath.Join(repoRoot, ".worktrees", "feat")
+	require.NoError(t, os.MkdirAll(wtPath, 0755))
+
+	srcDir := filepath.Join(repoRoot, "mydir")
+	require.NoError(t, os.MkdirAll(srcDir, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "real.txt"), []byte("real"), 0644))
+	require.NoError(t, os.Symlink(filepath.Join(srcDir, "real.txt"), filepath.Join(srcDir, "link.txt")))
+
+	svc := NewService(nil, nil, WithCommonParams(CommonParams{
+		RepoRoot:  repoRoot,
+		CopyFiles: []string{"mydir"},
+	}))
+
+	err := svc.copyFiles(wtPath)
+	require.NoError(t, err)
+
+	_, err = os.Stat(filepath.Join(wtPath, "mydir", "real.txt"))
+	require.NoError(t, err, "real file should be copied")
+
+	_, err = os.Stat(filepath.Join(wtPath, "mydir", "link.txt"))
+	assert.True(t, os.IsNotExist(err), "symlink in directory should be skipped")
 }
 
 func TestShellQuote(t *testing.T) {

@@ -19,12 +19,12 @@ type Context struct {
 
 // Resolver resolves repository context from git metadata.
 type Resolver struct {
-	git git.Client
+	gitClient git.Client
 }
 
 // NewResolver creates a Resolver backed by the given git client.
-func NewResolver(git git.Client) *Resolver {
-	return &Resolver{git: git}
+func NewResolver(gitClient git.Client) *Resolver {
+	return &Resolver{gitClient: gitClient}
 }
 
 // Resolve resolves the full repository context.
@@ -49,7 +49,7 @@ func (r *Resolver) Resolve() (*Context, error) {
 }
 
 func (r *Resolver) resolveRepoRoot() (string, error) {
-	gitDir, err := r.git.GitCommonDir()
+	gitDir, err := r.gitClient.GitCommonDir()
 	if err != nil {
 		return "", fmt.Errorf("not a git repository: %w", err)
 	}
@@ -57,7 +57,7 @@ func (r *Resolver) resolveRepoRoot() (string, error) {
 }
 
 func (r *Resolver) resolveDefaultBranch() (string, error) {
-	ref, err := r.git.SymbolicRef("refs/remotes/origin/HEAD")
+	ref, err := r.gitClient.SymbolicRef("refs/remotes/origin/HEAD")
 	if err == nil {
 		return strings.TrimPrefix(ref, "refs/remotes/origin/"), nil
 	}
@@ -71,7 +71,7 @@ func (r *Resolver) resolveDefaultBranch() (string, error) {
 
 	// Fallback: check main, then master
 	for _, name := range []string{"main", "master"} {
-		exists, err := r.git.BranchExists(name)
+		exists, err := r.gitClient.BranchExists(name)
 		if err != nil {
 			return "", err
 		}
@@ -84,7 +84,7 @@ func (r *Resolver) resolveDefaultBranch() (string, error) {
 }
 
 func (r *Resolver) resolveSessionName(repoRoot string) string {
-	rawURL, err := r.git.RemoteGetURL("origin")
+	rawURL, err := r.gitClient.RemoteGetURL("origin")
 	if err == nil {
 		if orgRepo := parseOrgRepo(rawURL); orgRepo != "" {
 			return sanitizeSessionName(orgRepo)
@@ -95,12 +95,18 @@ func (r *Resolver) resolveSessionName(repoRoot string) string {
 	return sanitizeSessionName(filepath.Base(repoRoot))
 }
 
+const (
+	asciiSpace = 0x20 // first printable ASCII character
+	asciiDEL   = 0x7f // DEL control character
+)
+
 // sanitizeSessionName makes a string safe for use as a tmux session name.
 // tmux treats ':' and '.' specially; whitespace is replaced for usability.
 func sanitizeSessionName(s string) string {
 	s = strings.ReplaceAll(s, ":", "-")
+	s = strings.ReplaceAll(s, ".", "-")
 	s = strings.Map(func(r rune) rune {
-		if r < 0x20 || r == 0x7f {
+		if r < asciiSpace || r == asciiDEL {
 			return '-'
 		}
 		if r == ' ' || r == '\t' {
@@ -108,7 +114,7 @@ func sanitizeSessionName(s string) string {
 		}
 		return r
 	}, s)
-	s = strings.TrimLeft(s, ".")
+	s = strings.TrimLeft(s, "-")
 	if s == "" {
 		return "hashi"
 	}

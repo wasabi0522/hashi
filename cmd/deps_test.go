@@ -85,6 +85,19 @@ func TestResolveDepsWithExec(t *testing.T) {
 	})
 }
 
+func TestServiceOpts(t *testing.T) {
+	t.Run("returns nil when not verbose", func(t *testing.T) {
+		a := &App{verbose: false}
+		assert.Nil(t, a.serviceOpts())
+	})
+
+	t.Run("returns logger option when verbose", func(t *testing.T) {
+		a := &App{verbose: true}
+		opts := a.serviceOpts()
+		require.Len(t, opts, 1)
+	})
+}
+
 func TestResolveGitDepsWithExec(t *testing.T) {
 	t.Run("git not found", func(t *testing.T) {
 		e := &hashiexec.ExecutorMock{

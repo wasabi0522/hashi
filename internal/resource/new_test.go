@@ -28,7 +28,7 @@ func TestNew(t *testing.T) {
 		tm := stubTmuxInside()
 
 		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, tm, WithCommonParams(cp))
+		svc := NewService(g, tm, WithCommonParams(cp))
 		_, err := svc.New(context.Background(), NewParams{
 			Branch: "feature",
 		})
@@ -51,7 +51,7 @@ func TestNew(t *testing.T) {
 		tm := stubTmuxInside()
 
 		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, tm, WithCommonParams(cp))
+		svc := NewService(g, tm, WithCommonParams(cp))
 		_, err := svc.New(context.Background(), NewParams{
 			Branch: "feature",
 			Base:   "develop",
@@ -66,7 +66,7 @@ func TestNew(t *testing.T) {
 		}
 
 		cp := CommonParams{DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, stubTmux(), WithCommonParams(cp))
+		svc := NewService(g, stubTmux(), WithCommonParams(cp))
 		_, err := svc.New(context.Background(), NewParams{
 			Branch: "feature",
 			Base:   "develop",
@@ -81,7 +81,7 @@ func TestNew(t *testing.T) {
 		}
 
 		cp := CommonParams{DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, stubTmux(), WithCommonParams(cp))
+		svc := NewService(g, stubTmux(), WithCommonParams(cp))
 		_, err := svc.New(context.Background(), NewParams{
 			Branch: "feature",
 			Base:   "nonexistent",
@@ -98,7 +98,7 @@ func TestNew(t *testing.T) {
 		}
 
 		cp := CommonParams{DefaultBranch: "main"}
-		svc := newTestSvc(g, stubTmux(), WithCommonParams(cp))
+		svc := NewService(g, stubTmux(), WithCommonParams(cp))
 		_, err := svc.New(context.Background(), NewParams{
 			Branch: "feature",
 		})
@@ -132,7 +132,7 @@ func TestNew(t *testing.T) {
 		}
 
 		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, tm, WithCommonParams(cp))
+		svc := NewService(g, tm, WithCommonParams(cp))
 		_, err := svc.New(context.Background(), NewParams{
 			Branch: "feature",
 		})
@@ -168,7 +168,7 @@ func TestNew(t *testing.T) {
 		}
 
 		cp := CommonParams{RepoRoot: "/repo", WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, tm, WithCommonParams(cp))
+		svc := NewService(g, tm, WithCommonParams(cp))
 		_, err := svc.New(context.Background(), NewParams{
 			Branch: "feature",
 		})
@@ -201,7 +201,7 @@ func TestNew(t *testing.T) {
 		}
 
 		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, tm, WithCommonParams(cp))
+		svc := NewService(g, tm, WithCommonParams(cp))
 		_, err := svc.New(context.Background(), NewParams{
 			Branch: "feature",
 		})
@@ -251,7 +251,7 @@ func TestNew(t *testing.T) {
 		}
 
 		cp := CommonParams{RepoRoot: repoRoot, WorktreeDir: ".worktrees", DefaultBranch: "main", SessionName: "org/repo"}
-		svc := newTestSvc(g, stubTmux(), WithCommonParams(cp))
+		svc := NewService(g, stubTmux(), WithCommonParams(cp))
 		_, err := svc.New(context.Background(), NewParams{
 			Branch: "feature",
 		})

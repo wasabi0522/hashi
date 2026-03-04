@@ -7,8 +7,9 @@ import (
 
 // NewParams holds parameters for the New operation.
 type NewParams struct {
-	Branch string
-	Base   string
+	Branch  string
+	Base    string
+	NoHooks bool
 }
 
 // New creates or switches to a branch with its worktree and tmux window.
@@ -33,56 +34,51 @@ func (s *Service) New(ctx context.Context, p NewParams) (*OperationResult, error
 		return nil, fmt.Errorf("cannot specify base branch for existing branch '%s'", p.Branch)
 	}
 
+	rb := newRollback(s)
+	defer rb.execute()
+
 	var wtPath string
 	var wtCreated bool
-	var branchCreated bool
 
 	if branchExists {
 		wtPath, wtCreated, err = s.ensureWorktree(p.Branch)
 		if err != nil {
 			return nil, fmt.Errorf("ensuring worktree: %w", err)
 		}
+		if wtCreated {
+			rb.add("RemoveWorktree", func() error { return s.git.RemoveWorktree(wtPath) })
+		}
 	} else {
 		base := p.Base
 		if base == "" {
-			base = s.cp.DefaultBranch
+			base = s.params.DefaultBranch
 		}
 		if _, ok := branchSet[base]; !ok {
 			return nil, &BranchNotFoundError{Branch: base}
 		}
 
-		wtPath = s.cp.WorktreePath(p.Branch)
+		wtPath = s.params.WorktreePath(p.Branch)
 		if err := s.addWorktreeNewBranch(wtPath, p.Branch, base); err != nil {
 			return nil, fmt.Errorf("creating worktree: %w", err)
 		}
 		wtCreated = true
-		branchCreated = true
+		rb.add("RemoveWorktree", func() error { return s.git.RemoveWorktree(wtPath) })
+		rb.add("DeleteBranch", func() error { return s.git.DeleteBranch(p.Branch) })
 	}
 
 	// Copy files before creating tmux (hooks may depend on them)
 	if wtCreated {
 		if err := s.copyFiles(wtPath); err != nil {
-			s.rollbackNew(wtCreated, branchCreated, wtPath, p.Branch)
 			return nil, err
 		}
 	}
 
 	// Ensure tmux (best-effort rollback on failure)
-	initCmd := s.buildInitCmd(wtCreated)
-	if err := s.ensureTmux(s.cp.SessionName, p.Branch, wtPath, initCmd); err != nil {
-		s.rollbackNew(wtCreated, branchCreated, wtPath, p.Branch)
+	initCmd := s.buildInitCmd(wtCreated, p.NoHooks)
+	if err := s.ensureTmux(s.params.SessionName, p.Branch, wtPath, initCmd); err != nil {
 		return nil, err
 	}
 
+	rb.disarm()
 	return s.finalizeOperation(OpNew, p.Branch, wtPath, wtCreated)
-}
-
-// rollbackNew performs best-effort cleanup of newly created resources.
-func (s *Service) rollbackNew(wtCreated, branchCreated bool, wtPath, branch string) {
-	if wtCreated {
-		s.bestEffort("RemoveWorktree", s.git.RemoveWorktree(wtPath))
-	}
-	if branchCreated {
-		s.bestEffort("DeleteBranch", s.git.DeleteBranch(branch))
-	}
 }

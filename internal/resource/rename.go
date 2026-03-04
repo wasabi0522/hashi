@@ -58,11 +58,11 @@ func (s *Service) Rename(ctx context.Context, p RenameParams) (*OperationResult,
 	}
 
 	// Handle tmux
-	initCmd := s.buildInitCmd(wtCreated)
+	initCmd := s.buildInitCmd(wtCreated, false)
 	s.renameTmuxWindow(p, wtPath, initCmd)
 
 	// Best-effort connect to the renamed window (aligns with New/Switch behavior)
-	s.bestEffort("connect", s.connect(s.cp.SessionName, p.New))
+	s.bestEffort("connect", s.connect(s.params.SessionName, p.New))
 
 	rb.disarm()
 	return &OperationResult{Operation: OpRename, Branch: p.New, WorktreePath: wtPath, Created: wtCreated}, nil
@@ -77,7 +77,7 @@ func (s *Service) renameWorktree(p RenameParams) (string, bool, error) {
 	if err != nil {
 		return "", false, err
 	}
-	if wt := findWorktree(worktrees, p.New); wt != nil && !wt.IsMain {
+	if wt := findNonMainWorktree(worktrees, p.New); wt != nil {
 		wtPath, err := s.moveWorktree(p, wt.Path)
 		return wtPath, false, err
 	}
@@ -86,7 +86,7 @@ func (s *Service) renameWorktree(p RenameParams) (string, bool, error) {
 
 // moveWorktree moves the worktree directory from its current location to the new path.
 func (s *Service) moveWorktree(p RenameParams, oldPath string) (string, error) {
-	newPath := s.cp.WorktreePath(p.New)
+	newPath := s.params.WorktreePath(p.New)
 
 	if err := ensureParentDir(newPath); err != nil {
 		return "", fmt.Errorf("creating directory: %w", err)
@@ -107,14 +107,14 @@ func (s *Service) moveWorktree(p RenameParams, oldPath string) (string, error) {
 // renameTmuxWindow updates the tmux window for the renamed branch.
 // All tmux operations are best-effort: failures are silently ignored.
 func (s *Service) renameTmuxWindow(p RenameParams, wtPath, initCmd string) {
-	windows := s.listWindowsSafe(s.cp.SessionName)
+	windows := s.listWindowsSafe(s.params.SessionName)
 	if windows == nil {
 		return
 	}
 	if findWindow(windows, p.Old) != nil {
-		s.bestEffort("RenameWindow", s.tmux.RenameWindow(s.cp.SessionName, p.Old, p.New))
-		s.sendCd(s.cp.SessionName, p.New, wtPath)
+		s.bestEffort("RenameWindow", s.tmux.RenameWindow(s.params.SessionName, p.Old, p.New))
+		s.sendCd(s.params.SessionName, p.New, wtPath)
 		return
 	}
-	s.bestEffort("NewWindow", s.tmux.NewWindow(s.cp.SessionName, p.New, wtPath, initCmd))
+	s.bestEffort("NewWindow", s.tmux.NewWindow(s.params.SessionName, p.New, wtPath, initCmd))
 }

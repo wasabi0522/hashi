@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/wasabi0522/hashi/internal/resource"
@@ -20,6 +23,10 @@ func (a *App) switchCmd(completeBranches completionFunc) *cobra.Command {
 func (a *App) runSwitch(cmd *cobra.Command, args []string) error {
 	return a.withService(func(svc *resource.Service) error {
 		_, err := svc.Switch(cmd.Context(), resource.SwitchParams{Branch: args[0]})
+		var mismatch *resource.RepoRootBranchMismatchError
+		if errors.As(err, &mismatch) {
+			return fmt.Errorf("%w\n  hint: %s", err, mismatch.Suggestion())
+		}
 		return err
 	})
 }

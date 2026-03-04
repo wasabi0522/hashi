@@ -4,7 +4,6 @@
 package exec
 
 import (
-	"context"
 	"sync"
 )
 
@@ -30,12 +29,6 @@ var _ Executor = &ExecutorMock{}
 //			RunInteractiveFunc: func(name string, args ...string) error {
 //				panic("mock out the RunInteractive method")
 //			},
-//			RunShellFunc: func(command string, dir string) error {
-//				panic("mock out the RunShell method")
-//			},
-//			RunShellContextFunc: func(ctx context.Context, command string, dir string) error {
-//				panic("mock out the RunShellContext method")
-//			},
 //		}
 //
 //		// use mockedExecutor in code that requires Executor
@@ -54,12 +47,6 @@ type ExecutorMock struct {
 
 	// RunInteractiveFunc mocks the RunInteractive method.
 	RunInteractiveFunc func(name string, args ...string) error
-
-	// RunShellFunc mocks the RunShell method.
-	RunShellFunc func(command string, dir string) error
-
-	// RunShellContextFunc mocks the RunShellContext method.
-	RunShellContextFunc func(ctx context.Context, command string, dir string) error
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -89,29 +76,11 @@ type ExecutorMock struct {
 			// Args is the args argument value.
 			Args []string
 		}
-		// RunShell holds details about calls to the RunShell method.
-		RunShell []struct {
-			// Command is the command argument value.
-			Command string
-			// Dir is the dir argument value.
-			Dir string
-		}
-		// RunShellContext holds details about calls to the RunShellContext method.
-		RunShellContext []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-			// Command is the command argument value.
-			Command string
-			// Dir is the dir argument value.
-			Dir string
-		}
 	}
-	lockLookPath        sync.RWMutex
-	lockOutput          sync.RWMutex
-	lockRun             sync.RWMutex
-	lockRunInteractive  sync.RWMutex
-	lockRunShell        sync.RWMutex
-	lockRunShellContext sync.RWMutex
+	lockLookPath       sync.RWMutex
+	lockOutput         sync.RWMutex
+	lockRun            sync.RWMutex
+	lockRunInteractive sync.RWMutex
 }
 
 // LookPath calls LookPathFunc.
@@ -251,81 +220,5 @@ func (mock *ExecutorMock) RunInteractiveCalls() []struct {
 	mock.lockRunInteractive.RLock()
 	calls = mock.calls.RunInteractive
 	mock.lockRunInteractive.RUnlock()
-	return calls
-}
-
-// RunShell calls RunShellFunc.
-func (mock *ExecutorMock) RunShell(command string, dir string) error {
-	if mock.RunShellFunc == nil {
-		panic("ExecutorMock.RunShellFunc: method is nil but Executor.RunShell was just called")
-	}
-	callInfo := struct {
-		Command string
-		Dir     string
-	}{
-		Command: command,
-		Dir:     dir,
-	}
-	mock.lockRunShell.Lock()
-	mock.calls.RunShell = append(mock.calls.RunShell, callInfo)
-	mock.lockRunShell.Unlock()
-	return mock.RunShellFunc(command, dir)
-}
-
-// RunShellCalls gets all the calls that were made to RunShell.
-// Check the length with:
-//
-//	len(mockedExecutor.RunShellCalls())
-func (mock *ExecutorMock) RunShellCalls() []struct {
-	Command string
-	Dir     string
-} {
-	var calls []struct {
-		Command string
-		Dir     string
-	}
-	mock.lockRunShell.RLock()
-	calls = mock.calls.RunShell
-	mock.lockRunShell.RUnlock()
-	return calls
-}
-
-// RunShellContext calls RunShellContextFunc.
-func (mock *ExecutorMock) RunShellContext(ctx context.Context, command string, dir string) error {
-	if mock.RunShellContextFunc == nil {
-		panic("ExecutorMock.RunShellContextFunc: method is nil but Executor.RunShellContext was just called")
-	}
-	callInfo := struct {
-		Ctx     context.Context
-		Command string
-		Dir     string
-	}{
-		Ctx:     ctx,
-		Command: command,
-		Dir:     dir,
-	}
-	mock.lockRunShellContext.Lock()
-	mock.calls.RunShellContext = append(mock.calls.RunShellContext, callInfo)
-	mock.lockRunShellContext.Unlock()
-	return mock.RunShellContextFunc(ctx, command, dir)
-}
-
-// RunShellContextCalls gets all the calls that were made to RunShellContext.
-// Check the length with:
-//
-//	len(mockedExecutor.RunShellContextCalls())
-func (mock *ExecutorMock) RunShellContextCalls() []struct {
-	Ctx     context.Context
-	Command string
-	Dir     string
-} {
-	var calls []struct {
-		Ctx     context.Context
-		Command string
-		Dir     string
-	}
-	mock.lockRunShellContext.RLock()
-	calls = mock.calls.RunShellContext
-	mock.lockRunShellContext.RUnlock()
 	return calls
 }

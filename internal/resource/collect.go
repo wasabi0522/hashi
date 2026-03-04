@@ -42,7 +42,7 @@ func (s *Service) CollectState(ctx context.Context) ([]State, error) {
 	}
 	branchSet := toSet(branches)
 
-	windows := s.listWindowsSafe(s.cp.SessionName)
+	windows := s.listWindowsSafe(s.params.SessionName)
 	winMap := toMap(windows, func(w tmux.Window) string { return w.Name })
 
 	seen := make(map[string]struct{})
@@ -63,7 +63,7 @@ func (s *Service) CollectState(ctx context.Context) ([]State, error) {
 			Worktree:  wt.Path,
 			Window:    hasWin,
 			Active:    hasWin && win.Active,
-			IsDefault: name == s.cp.DefaultBranch,
+			IsDefault: name == s.params.DefaultBranch,
 			Status:    classifyWorktreeStatus(wt, branchSet),
 		})
 	}

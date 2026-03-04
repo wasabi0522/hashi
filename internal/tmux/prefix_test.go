@@ -1,6 +1,7 @@
 package tmux
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -170,6 +171,17 @@ func TestPrefixedClient_SwitchClient(t *testing.T) {
 	}
 	c := NewPrefixedClient(inner, "hs/")
 	require.NoError(t, c.SwitchClient("sess", "win"))
+}
+
+func TestPrefixedClient_ListWindows_error(t *testing.T) {
+	inner := newMock()
+	inner.ListWindowsFunc = func(session string) ([]Window, error) {
+		return nil, fmt.Errorf("tmux error")
+	}
+	c := NewPrefixedClient(inner, "hs/")
+	_, err := c.ListWindows("sess")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "tmux error")
 }
 
 func TestPrefixedClient_IsInsideTmux(t *testing.T) {

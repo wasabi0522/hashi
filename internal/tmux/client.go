@@ -65,8 +65,8 @@ func (c *client) KillWindow(session, window string) error {
 	return c.exec.Run("tmux", "kill-window", "-t", target(session, window))
 }
 
-func (c *client) RenameWindow(session, old, new string) error {
-	return c.exec.Run("tmux", "rename-window", "-t", target(session, old), new)
+func (c *client) RenameWindow(session, oldName, newName string) error {
+	return c.exec.Run("tmux", "rename-window", "-t", target(session, oldName), newName)
 }
 
 func (c *client) SendKeys(session, window string, keys ...string) error {

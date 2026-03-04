@@ -44,7 +44,7 @@ var _ Client = &ClientMock{}
 //			PaneCurrentCommandFunc: func(session string, window string) (string, error) {
 //				panic("mock out the PaneCurrentCommand method")
 //			},
-//			RenameWindowFunc: func(session string, old string, new string) error {
+//			RenameWindowFunc: func(session string, oldName string, newName string) error {
 //				panic("mock out the RenameWindow method")
 //			},
 //			SendKeysFunc: func(session string, window string, keys ...string) error {
@@ -88,7 +88,7 @@ type ClientMock struct {
 	PaneCurrentCommandFunc func(session string, window string) (string, error)
 
 	// RenameWindowFunc mocks the RenameWindow method.
-	RenameWindowFunc func(session string, old string, new string) error
+	RenameWindowFunc func(session string, oldName string, newName string) error
 
 	// SendKeysFunc mocks the SendKeys method.
 	SendKeysFunc func(session string, window string, keys ...string) error
@@ -163,10 +163,10 @@ type ClientMock struct {
 		RenameWindow []struct {
 			// Session is the session argument value.
 			Session string
-			// Old is the old argument value.
-			Old string
-			// New is the new argument value.
-			New string
+			// OldName is the oldName argument value.
+			OldName string
+			// NewName is the newName argument value.
+			NewName string
 		}
 		// SendKeys holds details about calls to the SendKeys method.
 		SendKeys []struct {
@@ -519,23 +519,23 @@ func (mock *ClientMock) PaneCurrentCommandCalls() []struct {
 }
 
 // RenameWindow calls RenameWindowFunc.
-func (mock *ClientMock) RenameWindow(session string, old string, new string) error {
+func (mock *ClientMock) RenameWindow(session string, oldName string, newName string) error {
 	if mock.RenameWindowFunc == nil {
 		panic("ClientMock.RenameWindowFunc: method is nil but Client.RenameWindow was just called")
 	}
 	callInfo := struct {
 		Session string
-		Old     string
-		New     string
+		OldName string
+		NewName string
 	}{
 		Session: session,
-		Old:     old,
-		New:     new,
+		OldName: oldName,
+		NewName: newName,
 	}
 	mock.lockRenameWindow.Lock()
 	mock.calls.RenameWindow = append(mock.calls.RenameWindow, callInfo)
 	mock.lockRenameWindow.Unlock()
-	return mock.RenameWindowFunc(session, old, new)
+	return mock.RenameWindowFunc(session, oldName, newName)
 }
 
 // RenameWindowCalls gets all the calls that were made to RenameWindow.
@@ -544,13 +544,13 @@ func (mock *ClientMock) RenameWindow(session string, old string, new string) err
 //	len(mockedClient.RenameWindowCalls())
 func (mock *ClientMock) RenameWindowCalls() []struct {
 	Session string
-	Old     string
-	New     string
+	OldName string
+	NewName string
 } {
 	var calls []struct {
 		Session string
-		Old     string
-		New     string
+		OldName string
+		NewName string
 	}
 	mock.lockRenameWindow.RLock()
 	calls = mock.calls.RenameWindow

@@ -62,8 +62,8 @@ func (c *client) BranchExists(name string) (bool, error) {
 	return strings.TrimSpace(out) != "", nil
 }
 
-func (c *client) RenameBranch(old, new string) error {
-	return c.exec.Run("git", "branch", "-m", "--", old, new)
+func (c *client) RenameBranch(oldName, newName string) error {
+	return c.exec.Run("git", "branch", "-m", "--", oldName, newName)
 }
 
 func (c *client) DeleteBranch(name string) error {

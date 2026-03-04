@@ -2,11 +2,12 @@ package exec
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"os"
 	osexec "os/exec"
+	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -33,8 +34,6 @@ type Executor interface {
 	Output(name string, args ...string) (string, error)
 	Run(name string, args ...string) error
 	RunInteractive(name string, args ...string) error
-	RunShell(command, dir string) error
-	RunShellContext(ctx context.Context, command, dir string) error
 }
 
 var _ Executor = (*DefaultExecutor)(nil)
@@ -54,12 +53,22 @@ func (e *DefaultExecutor) LookPath(name string) error {
 	return nil
 }
 
+// maxStderrBytes limits the stderr fragment included in error messages.
+const maxStderrBytes = 512
+
+// credentialPattern matches credentials embedded in URLs (e.g. https://user:token@host).
+var credentialPattern = regexp.MustCompile(`://[^@/\s]+@`)
+
 func wrapExecError(err error, stderr string) error {
 	errMsg := strings.TrimSpace(stderr)
-	if errMsg != "" {
-		return fmt.Errorf("%s: %w", errMsg, err)
+	if errMsg == "" {
+		return err
 	}
-	return err
+	if len(errMsg) > maxStderrBytes {
+		errMsg = errMsg[:maxStderrBytes] + "... (truncated)"
+	}
+	errMsg = credentialPattern.ReplaceAllString(errMsg, "://***@")
+	return fmt.Errorf("%s: %w", errMsg, err)
 }
 
 func (e *DefaultExecutor) Output(name string, args ...string) (string, error) {
@@ -91,18 +100,12 @@ func (e *DefaultExecutor) RunInteractive(name string, args ...string) error {
 	return cmd.Run()
 }
 
-func (e *DefaultExecutor) RunShell(command, dir string) error {
-	return e.RunShellContext(context.Background(), command, dir)
-}
-
-func (e *DefaultExecutor) RunShellContext(ctx context.Context, command, dir string) error {
+// ResolveShell returns the user's login shell from $SHELL.
+// Falls back to "sh" if $SHELL is unset or not an absolute path.
+func ResolveShell() string {
 	shell := os.Getenv("SHELL")
-	if shell == "" {
-		shell = "sh"
+	if shell != "" && filepath.IsAbs(shell) {
+		return shell
 	}
-	cmd := osexec.CommandContext(ctx, shell, "-c", command)
-	cmd.Dir = dir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	return "sh"
 }

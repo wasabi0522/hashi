@@ -49,12 +49,12 @@ func (s *Service) PrepareRemove(ctx context.Context, branch string) (RemoveCheck
 	if err != nil {
 		return RemoveCheck{}, fmt.Errorf("listing worktrees: %w", err)
 	}
-	if wt := findWorktree(worktrees, branch); wt != nil && !wt.IsMain {
+	if wt := findNonMainWorktree(worktrees, branch); wt != nil {
 		check.HasWorktree = true
 		check.WorktreePath = wt.Path
 	}
 
-	if w := findWindow(s.listWindowsSafe(s.cp.SessionName), branch); w != nil {
+	if w := findWindow(s.listWindowsSafe(s.params.SessionName), branch); w != nil {
 		check.HasWindow = true
 		check.IsActive = w.Active
 	}
@@ -71,7 +71,7 @@ func (s *Service) PrepareRemove(ctx context.Context, branch string) (RemoveCheck
 	if check.HasBranch {
 		// Defaults to unmerged=true on failure (via !merged where merged=false):
 		// this is the safe side, warning the user even when the check itself fails.
-		merged, _ := s.git.IsMerged(branch, s.cp.DefaultBranch)
+		merged, _ := s.git.IsMerged(branch, s.params.DefaultBranch)
 		check.IsUnmerged = !merged
 	}
 
@@ -92,11 +92,11 @@ func (s *Service) ExecuteRemove(ctx context.Context, check RemoveCheck) (*Remove
 
 	// Switch from active window if needed
 	if check.IsActive {
-		if err := s.ensureTmux(s.cp.SessionName, s.cp.DefaultBranch, s.cp.RepoRoot, ""); err != nil {
+		if err := s.ensureTmux(s.params.SessionName, s.params.DefaultBranch, s.params.RepoRoot, ""); err != nil {
 			return nil, fmt.Errorf("switching to default branch: %w", err)
 		}
 		if s.tmux.IsInsideTmux() {
-			s.bestEffort("SwitchClient", s.tmux.SwitchClient(s.cp.SessionName, s.cp.DefaultBranch))
+			s.bestEffort("SwitchClient", s.tmux.SwitchClient(s.params.SessionName, s.params.DefaultBranch))
 		}
 	}
 
@@ -114,7 +114,7 @@ func (s *Service) ExecuteRemove(ctx context.Context, check RemoveCheck) (*Remove
 	if check.HasBranch {
 		// Use DeleteBranchFrom with repo root to avoid depending on CWD,
 		// which may no longer exist after worktree removal.
-		if err := s.git.DeleteBranchFrom(s.cp.RepoRoot, check.Branch); err != nil {
+		if err := s.git.DeleteBranchFrom(s.params.RepoRoot, check.Branch); err != nil {
 			return nil, fmt.Errorf("deleting branch: %w", err)
 		}
 		result.BranchDeleted = true
@@ -122,18 +122,18 @@ func (s *Service) ExecuteRemove(ctx context.Context, check RemoveCheck) (*Remove
 
 	// Kill window last: may terminate this process via SIGHUP if it was the active window.
 	if check.HasWindow {
-		if err := s.tmux.KillWindow(s.cp.SessionName, check.Branch); err != nil {
+		if err := s.tmux.KillWindow(s.params.SessionName, check.Branch); err != nil {
 			return nil, fmt.Errorf("killing window: %w", err)
 		}
 		result.WindowKilled = true
 	}
 
 	// Best-effort: kill session if no windows remain.
-	if ok, _ := s.tmux.HasSession(s.cp.SessionName); ok {
-		windows, lErr := s.tmux.ListWindows(s.cp.SessionName)
+	if ok, _ := s.tmux.HasSession(s.params.SessionName); ok {
+		windows, lErr := s.tmux.ListWindows(s.params.SessionName)
 		s.bestEffort("ListWindows", lErr)
 		if len(windows) == 0 {
-			if err := s.tmux.KillSession(s.cp.SessionName); err == nil {
+			if err := s.tmux.KillSession(s.params.SessionName); err == nil {
 				result.SessionKilled = true
 			}
 		}

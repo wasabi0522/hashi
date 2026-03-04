@@ -307,6 +307,72 @@ func TestClientRepairWorktrees(t *testing.T) {
 	require.NoError(t, c.RepairWorktrees())
 }
 
+func TestClientCurrentBranch(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		e := mockExec()
+		e.OutputFunc = func(name string, args ...string) (string, error) {
+			assert.Equal(t, []string{"-C", "/repo", "rev-parse", "--abbrev-ref", "HEAD"}, args)
+			return "main", nil
+		}
+		c := NewClient(e)
+		branch, err := c.CurrentBranch("/repo")
+		require.NoError(t, err)
+		assert.Equal(t, "main", branch)
+	})
+
+	t.Run("error", func(t *testing.T) {
+		e := mockExec()
+		e.OutputFunc = func(name string, args ...string) (string, error) {
+			return "", fmt.Errorf("not a git repo")
+		}
+		c := NewClient(e)
+		_, err := c.CurrentBranch("/repo")
+		assert.Error(t, err)
+	})
+}
+
+func TestClientSwitchBranch(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		e := mockExec()
+		e.RunFunc = func(name string, args ...string) error {
+			assert.Equal(t, []string{"-C", "/repo", "switch", "feature"}, args)
+			return nil
+		}
+		c := NewClient(e)
+		require.NoError(t, c.SwitchBranch("/repo", "feature"))
+	})
+
+	t.Run("error", func(t *testing.T) {
+		e := mockExec()
+		e.RunFunc = func(name string, args ...string) error {
+			return fmt.Errorf("switch failed")
+		}
+		c := NewClient(e)
+		assert.Error(t, c.SwitchBranch("/repo", "feature"))
+	})
+}
+
+func TestClientDeleteBranchFrom(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		e := mockExec()
+		e.RunFunc = func(name string, args ...string) error {
+			assert.Equal(t, []string{"-C", "/repo", "branch", "-D", "--", "feat"}, args)
+			return nil
+		}
+		c := NewClient(e)
+		require.NoError(t, c.DeleteBranchFrom("/repo", "feat"))
+	})
+
+	t.Run("error", func(t *testing.T) {
+		e := mockExec()
+		e.RunFunc = func(name string, args ...string) error {
+			return fmt.Errorf("delete failed")
+		}
+		c := NewClient(e)
+		assert.Error(t, c.DeleteBranchFrom("/repo", "feat"))
+	})
+}
+
 func TestParseWorktreeList(t *testing.T) {
 	tests := []struct {
 		name  string

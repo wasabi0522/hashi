@@ -92,16 +92,6 @@ func (a *App) serviceOpts() []resource.Option {
 	return nil
 }
 
-// resolveShell returns the user's login shell from $SHELL.
-// Falls back to "sh" if $SHELL is unset or not an absolute path.
-func resolveShell() string {
-	shell := os.Getenv("SHELL")
-	if shell != "" && filepath.IsAbs(shell) {
-		return shell
-	}
-	return "sh"
-}
-
 func (d *deps) service(opts ...resource.Option) *resource.Service {
 	allOpts := []resource.Option{
 		resource.WithCommonParams(resource.CommonParams{
@@ -109,7 +99,7 @@ func (d *deps) service(opts ...resource.Option) *resource.Service {
 			WorktreeDir:   d.cfg.WorktreeDir,
 			DefaultBranch: d.ctx.DefaultBranch,
 			SessionName:   d.ctx.SessionName,
-			Shell:         resolveShell(),
+			Shell:         hashiexec.ResolveShell(),
 			CopyFiles:     d.cfg.Hooks.CopyFiles,
 			PostNewHooks:  d.cfg.Hooks.PostNew,
 		}),
